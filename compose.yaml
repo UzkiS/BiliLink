@@ -1,0 +1,16 @@
+# BiliLink 的 Docker Compose 部署文件，启动：docker compose up -d
+# 自定义配置：在本文件同目录创建 .env（参考 .env.example）；使用默认配置时可以不创建。
+services:
+  bililink:
+    image: ghcr.io/uzkis/bililink:latest
+    restart: unless-stopped
+    ports:
+      # 宿主机端口:容器端口。需要换对外端口时只改左边的数字。
+      - "5000:5000"
+    env_file:
+      - path: .env
+        required: false
+    # 安全加固：服务不写磁盘，也不需要任何特权。
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]

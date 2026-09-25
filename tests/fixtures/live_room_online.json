@@ -1,0 +1,151 @@
+{
+  "code": 0,
+  "message": "OK",
+  "ttl": 1,
+  "data": {
+    "room_id": 7734200,
+    "short_id": 6,
+    "uid": 50329118,
+    "is_hidden": false,
+    "is_locked": false,
+    "is_portrait": false,
+    "live_status": 1,
+    "encrypted": false,
+    "pwd_verified": true,
+    "live_time": 1788762159,
+    "playurl_info": {
+      "conf_json": "{\"cdn_rate\":10000,\"report_interval_sec\":150}",
+      "playurl": {
+        "cid": 7734200,
+        "stream": [
+          {
+            "protocol_name": "http_hls",
+            "format": [
+              {
+                "format_name": "ts",
+                "codec": [
+                  {
+                    "codec_name": "avc",
+                    "current_qn": 250,
+                    "accept_qn": [
+                      10000,
+                      400,
+                      250,
+                      150
+                    ],
+                    "base_url": "/live-bvc/496286/live_50329118_9516950_2500.m3u8?",
+                    "url_info": [
+                      {
+                        "host": "https://d1--cn-gotcha104.bilivideo.com",
+                        "extra": "expires=1790000000&len=0&oi=0&pt=h5&qn=10000&trid=placeholder&sign=placeholder",
+                        "stream_ttl": 0
+                      },
+                      {
+                        "host": "https://d1--cn-gotcha104b.bilivideo.com",
+                        "extra": "expires=1790000000&len=0&oi=0&pt=h5&qn=10000&trid=placeholder&sign=placeholder",
+                        "stream_ttl": 0
+                      }
+                    ],
+                    "hdr_qn": null,
+                    "dolby_type": 0,
+                    "attr_name": "",
+                    "hdr_type": 0,
+                    "drm": false,
+                    "drm_key_systems": null,
+                    "video_codecs": {
+                      "base": "avc1.64001f",
+                      "ext": [
+                        ""
+                      ]
+                    },
+                    "audio_codecs": {
+                      "base": "mp4a.40.2",
+                      "ext": [
+                        ""
+                      ]
+                    },
+                    "session": "live_50329118_9516950",
+                    "is_pushing": true,
+                    "stream_resource_req": null,
+                    "video_color_info": {
+                      "colorspace": "bt709",
+                      "metadata_types": [
+                        "none"
+                      ]
+                    },
+                    "media_info": {
+                      "height": 720,
+                      "width": 1280,
+                      "realtime_avg_bw": 172763
+                    }
+                  },
+                  {
+                    "codec_name": "hevc",
+                    "current_qn": 250,
+                    "accept_qn": [
+                      10000,
+                      400,
+                      250
+                    ],
+                    "base_url": "/live-bvc/503693/live_50329118_9516950_minihevc.m3u8?",
+                    "url_info": [
+                      {
+                        "host": "https://d1--cn-gotcha104.bilivideo.com",
+                        "extra": "expires=1790000000&len=0&oi=0&pt=h5&qn=10000&trid=placeholder&sign=placeholder",
+                        "stream_ttl": 0
+                      },
+                      {
+                        "host": "https://d1--cn-gotcha104b.bilivideo.com",
+                        "extra": "expires=1790000000&len=0&oi=0&pt=h5&qn=10000&trid=placeholder&sign=placeholder",
+                        "stream_ttl": 0
+                      }
+                    ],
+                    "hdr_qn": null,
+                    "dolby_type": 0,
+                    "attr_name": "",
+                    "hdr_type": 0,
+                    "drm": false,
+                    "drm_key_systems": null,
+                    "video_codecs": {
+                      "base": "hvc1.1.6.L93",
+                      "ext": [
+                        ""
+                      ]
+                    },
+                    "audio_codecs": {
+                      "base": "mp4a.40.2",
+                      "ext": [
+                        ""
+                      ]
+                    },
+                    "session": "live_50329118_9516950",
+                    "is_pushing": true,
+                    "stream_resource_req": null,
+                    "video_color_info": {
+                      "colorspace": "bt709",
+                      "metadata_types": [
+                        "none"
+                      ]
+                    },
+                    "media_info": {
+                      "height": 720,
+                      "width": 1280,
+                      "realtime_avg_bw": 114459
+                    }
+                  }
+                ],
+                "master_url": ""
+              }
+            ]
+          }
+        ]
+      },
+      "expected_quality": {
+        "qn": 250,
+        "hdr_type": 0,
+        "eotf": 0
+      },
+      "qn_desc_more_ab": 1
+    }
+  }
+}

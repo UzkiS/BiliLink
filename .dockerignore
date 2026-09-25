@@ -1,0 +1,9 @@
+# 白名单：构建上下文只包含构建所需的文件，杜绝 .env 等机密进入镜像。
+*
+!.python-version
+!LICENSE
+!README.md
+!pyproject.toml
+!src/
+!uv.lock
+**/__pycache__

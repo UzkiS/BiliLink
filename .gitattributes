@@ -1,0 +1,5 @@
+# 统一使用 LF 换行，避免 Windows / WSL 混用时产生整文件差异。
+* text=auto eol=lf
+
+# 由工具生成的文件：在 GitHub 的 diff 与语言统计中折叠显示。
+uv.lock linguist-generated=true

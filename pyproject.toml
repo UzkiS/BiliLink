@@ -1,0 +1,157 @@
+[project]
+name = "bililink"
+version = "1.0.0"
+description = "B 站视频 / 直播直链解析服务：把 BV 号或直播间号重定向到可直接播放的媒体地址"
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "UzkiS" }]
+requires-python = ">=3.14"
+classifiers = ["Private :: Do Not Upload"] # 这是应用而非库，防止被误发布到 PyPI
+dependencies = [
+    "fastapi>=0.141.1",
+    "httpx2>=2.13.1",
+    "limits>=5.8.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "starlette>=1.7.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.urls]
+Repository = "https://github.com/UzkiS/BiliLink"
+Changelog = "https://github.com/UzkiS/BiliLink/blob/main/CHANGELOG.md"
+
+[project.scripts]
+bililink = "bililink.__main__:main"
+
+[dependency-groups]
+dev = [
+    "actionlint-py>=1.7.12.25",
+    "anyio>=4.15.1",
+    "deptry>=0.25.1",
+    "hadolint-py>=2.15.1.2",
+    "mypy>=2.3.1",
+    "packaging>=26.3",
+    "poethepoet>=0.48.0",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.9",
+    "shellcheck-py>=0.11.0.1",
+    "zizmor>=1.30.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv]
+# 本地与 CI 使用的 uv 版本范围；Dockerfile 固定的 uv 版本必须落在该范围内（由测试保证）。
+required-version = ">=0.12.19,<0.13"
+
+# ---------------------------------------------------------------------------
+# 开发命令：本地、pre-commit 与 CI 统一通过 `uv run poe <task>` 调用，这里是唯一定义处。
+# ---------------------------------------------------------------------------
+
+[tool.poe.tasks.lint]
+help = "静态检查：ruff、mypy、uv.lock 一致性与通用文件检查（自动修复可修复项）"
+cmd = "pre-commit run --all-files --show-diff-on-failure"
+
+[tool.poe.tasks.test]
+help = "运行测试并校验覆盖率"
+cmd = "pytest --cov --cov-report=term-missing"
+
+[tool.poe.tasks.test-live]
+help = "运行访问真实 B 站接口的测试，检查上游接口是否发生变更"
+cmd = "pytest -m live"
+
+[tool.poe.tasks.check]
+help = "提交前必须通过的全部检查，与 CI 完全一致"
+sequence = ["lint", "test"]
+
+[tool.poe.tasks.dev]
+help = "以开发模式启动服务：仅本机访问、自动重载、开放 /docs"
+cmd = "bililink"
+env = { BILILINK_HOST = "127.0.0.1", BILILINK_RELOAD = "true", BILILINK_DOCS_ENABLED = "true" }
+
+[tool.poe.tasks.env-example]
+help = "根据 src/bililink/config.py 重新生成 .env.example"
+cmd = "python scripts/gen_env_example.py"
+
+# ---------------------------------------------------------------------------
+# 工具配置
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # 与 ruff format 冲突，官方建议启用格式化器时关闭
+    "CPY001", # 许可证由 LICENSE 与 pyproject.toml 统一声明，不在每个文件重复
+    "D105",   # 魔术方法的语义约定俗成，无需 docstring
+    "D107",   # 构造参数在类 docstring 中说明
+    "D415",   # docstring 使用中文，以全角句号结尾，该规则只识别 ASCII 标点
+    "TC",     # FastAPI / pydantic 在运行时解析注解，TYPE_CHECKING 导入易导致运行时 NameError
+]
+# 中文文案中的全角标点是有意为之，不是易混淆字符。
+allowed-confusables = ["，", "：", "；", "！", "（", "）"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "D",       # 测试函数名即说明
+    "INP001",  # tests 目录不是包（pytest importlib 导入模式）
+    "PLR2004", # 断言中的字面量就是期望值
+    "S101",    # pytest 使用 assert
+]
+"scripts/**" = ["INP001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+files = ["src", "tests", "scripts"]
+strict = true
+warn_unreachable = true
+enable_error_code = [
+    "deprecated",
+    "exhaustive-match",
+    "ignore-without-code",
+    "possibly-undefined",
+    "redundant-expr",
+    "redundant-self",
+    "truthy-bool",
+    "truthy-iterable",
+    "unused-awaitable",
+]
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "-ra", "-m", "not live"]
+pythonpath = ["tests"]
+markers = ["live: 访问真实 B 站接口，默认不运行（uv run poe test-live）"]
+strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bililink"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_also = ['if __name__ == "__main__":']
+
+[tool.deptry]
+known_first_party = ["bililink"]

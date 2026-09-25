@@ -1,0 +1,66 @@
+# 通用文件检查使用 pre-commit-hooks；ruff、mypy 以 local hook 运行 uv.lock 中锁定的版本，
+# 保证本地、pre-commit 与 CI 使用同一份工具版本（唯一事实源：pyproject.toml + uv.lock）。
+# 运行方式见 pyproject.toml 中的 [tool.poe.tasks]。
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: uv lock --check
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: mypy
+        name: mypy
+        entry: uv run --frozen mypy
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true
+      - id: deptry
+        name: deptry（声明的依赖与实际导入一致）
+        entry: uv run --frozen deptry .
+        language: system
+        types_or: [python, toml]
+        pass_filenames: false
+      - id: hadolint
+        name: hadolint
+        entry: uv run --frozen hadolint
+        language: system
+        files: (^|/)Dockerfile$
+      - id: actionlint
+        name: actionlint（含 shellcheck）
+        entry: uv run --frozen actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+      - id: zizmor
+        name: zizmor（GitHub Actions 安全审计）
+        entry: uv run --frozen zizmor --offline
+        language: system
+        files: ^\.github/(workflows/.*|dependabot)\.ya?ml$

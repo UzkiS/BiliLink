@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "message": "OK",
+  "ttl": 1,
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "quality": 80,
+    "format": "mp4",
+    "timelength": 132865,
+    "accept_format": "mp4",
+    "accept_description": [
+      "高清 1080P"
+    ],
+    "accept_quality": [
+      80
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "second",
+    "durl": [
+      {
+        "order": 1,
+        "length": 132865,
+        "size": 10250015,
+        "ahead": "",
+        "vhead": "",
+        "url": "https://cn-jstz-cu-01-03.bilivideo.com/upgcxcode/63/96/35039663/35039663-1-208.mp4?e=placeholder&deadline=1790000000&upsig=placeholder",
+        "backup_url": []
+      }
+    ]
+  }
+}

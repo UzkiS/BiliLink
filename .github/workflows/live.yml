@@ -1,0 +1,28 @@
+name: B 站接口巡检
+
+# 每天用真实 B 站接口运行 live 测试，及早发现上游接口变更；失败时 GitHub 会发邮件通知。
+on:
+  schedule:
+    - cron: "17 1 * * *" # 每天北京时间 09:17
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: 真实接口测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: 安装依赖
+        run: uv sync --locked
+
+      - name: uv run poe test-live
+        run: uv run poe test-live

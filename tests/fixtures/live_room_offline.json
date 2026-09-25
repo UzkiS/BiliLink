@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "message": "OK",
+  "ttl": 1,
+  "data": {
+    "room_id": 5440,
+    "short_id": 1,
+    "uid": 9617619,
+    "is_hidden": false,
+    "is_locked": false,
+    "is_portrait": false,
+    "live_status": 2,
+    "encrypted": false,
+    "pwd_verified": true,
+    "live_time": 0,
+    "playurl_info": null
+  }
+}
