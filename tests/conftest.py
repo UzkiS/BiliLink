@@ -37,9 +37,10 @@ def make_client(bilibili: FakeBilibili) -> Iterator[ClientFactory]:
     """按给定配置启动应用（含 lifespan）并返回测试客户端，B 站接口由 ``bilibili`` 替身提供。"""
     with ExitStack() as stack:
 
-        def make(settings: Settings) -> TestClient:
+        def make(settings: Settings, *, client_ip: str = "testclient") -> TestClient:
             app = create_app(settings, transport=bilibili.transport)
-            return stack.enter_context(TestClient(app, follow_redirects=False))
+            client = TestClient(app, follow_redirects=False, client=(client_ip, 50000))
+            return stack.enter_context(client)
 
         yield make
 

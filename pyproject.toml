@@ -79,6 +79,10 @@ env = { BILILINK_HOST = "127.0.0.1", BILILINK_RELOAD = "true", BILILINK_DOCS_ENA
 help = "根据 src/bililink/config.py 重新生成 .env.example"
 cmd = "python scripts/gen_env_example.py"
 
+[tool.poe.tasks.update-geoip]
+help = "从 APNIC 下载最新数据，重新生成中国大陆 IP 段（src/bililink/cn_networks.txt）"
+cmd = "python scripts/update_geoip.py"
+
 # ---------------------------------------------------------------------------
 # 工具配置
 # ---------------------------------------------------------------------------

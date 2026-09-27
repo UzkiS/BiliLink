@@ -58,8 +58,18 @@ class Settings(BaseSettings):
             "upos-sz-mirror08c.bilivideo.com",
         ),
         description=(
-            "改写视频直链时使用的 CDN 镜像域名（JSON 数组），每次随机选择一个；"
-            "设为 [] 则保留 B 站返回的原始域名"
+            "中国大陆访问者（以及内网等无法判断地区的访问者）改写视频直链时使用的 CDN 镜像域名"
+            "（JSON 数组），每次随机选择一个；设为 [] 则保留 B 站返回的原始域名"
+        ),
+    )
+    cdn_overseas_hosts: tuple[Hostname, ...] = Field(
+        default=(
+            "upos-sz-mirroraliov.bilivideo.com",
+            "upos-sz-mirrorcosov.bilivideo.com",
+        ),
+        description=(
+            "中国大陆以外的访问者改写视频直链时使用的 CDN 镜像域名，规则同 BILILINK_CDN_HOSTS；"
+            "设为与 BILILINK_CDN_HOSTS 相同即不再按地区区分"
         ),
     )
     log_level: LogLevel = Field(

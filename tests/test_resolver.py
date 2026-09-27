@@ -1,32 +1,43 @@
-"""业务规则：分 P 选择、CDN 改写、直播编码选择与重定向目标校验。"""
+"""业务规则：分 P 选择、按地区改写 CDN、直播编码选择与重定向目标校验。"""
 
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
+from ipaddress import ip_address, ip_network
 from urllib.parse import urlsplit
 
 import pytest
 
 from bililink.errors import NotFoundError, UpstreamError
+from bililink.geoip import MainlandChinaNetworks
 from bililink.resolver import Resolver
 from fakes import LIVE_ROOM_PLAY_INFO, PLAYURL, FakeBilibili, load_fixture
 
 pytestmark = pytest.mark.anyio
 
 CDN_HOSTS = ("mirror-a.example.com", "mirror-b.example.com")
+CDN_OVERSEAS_HOSTS = ("overseas-a.example.com", "overseas-b.example.com")
+MAINLAND_NETWORKS = MainlandChinaNetworks([ip_network("114.114.114.0/24"), ip_network("240e::/20")])
 ORIGINAL_VIDEO_URL = load_fixture("playurl.json")["data"]["durl"][0]["url"]
 
 
 @asynccontextmanager
 async def make_resolver(
-    bilibili: FakeBilibili, cdn_hosts: Sequence[str] = CDN_HOSTS
+    bilibili: FakeBilibili,
+    cdn_hosts: Sequence[str] = CDN_HOSTS,
+    cdn_overseas_hosts: Sequence[str] = CDN_OVERSEAS_HOSTS,
 ) -> AsyncIterator[Resolver]:
     async with bilibili.client() as client:
-        yield Resolver(client, cdn_hosts=cdn_hosts)
+        yield Resolver(
+            client,
+            cdn_hosts=cdn_hosts,
+            cdn_overseas_hosts=cdn_overseas_hosts,
+            mainland_networks=MAINLAND_NETWORKS,
+        )
 
 
 async def test_resolve_video_uses_cid_of_requested_page(bilibili: FakeBilibili) -> None:
     async with make_resolver(bilibili) as resolver:
-        await resolver.resolve_video("BV1ex411J7GE", 3)
+        await resolver.resolve_video("BV1ex411J7GE", 3, None)
 
     [request] = bilibili.requests_to(PLAYURL)
     assert request.url.params["cid"] == "35039678"
@@ -34,18 +45,53 @@ async def test_resolve_video_uses_cid_of_requested_page(bilibili: FakeBilibili) 
 
 async def test_resolve_video_rewrites_host_to_a_cdn_mirror(bilibili: FakeBilibili) -> None:
     async with make_resolver(bilibili) as resolver:
-        url = await resolver.resolve_video("BV1ex411J7GE", 2)
+        url = await resolver.resolve_video("BV1ex411J7GE", 2, None)
 
     resolved, original = urlsplit(url), urlsplit(ORIGINAL_VIDEO_URL)
     assert resolved.netloc in CDN_HOSTS
     assert resolved._replace(netloc=original.netloc) == original
 
 
-async def test_resolve_video_keeps_original_host_without_cdn_hosts(
-    bilibili: FakeBilibili,
+@pytest.mark.parametrize(
+    ("client_ip", "hosts"),
+    [
+        ("114.114.114.114", CDN_HOSTS),  # 中国大陆
+        ("240e::1", CDN_HOSTS),  # 中国大陆 IPv6
+        ("8.8.8.8", CDN_OVERSEAS_HOSTS),  # 海外
+        ("2001:4860:4860::8888", CDN_OVERSEAS_HOSTS),  # 海外 IPv6
+        ("192.168.1.10", CDN_HOSTS),  # 内网：无法判断地区
+        ("127.0.0.1", CDN_HOSTS),  # 回环：如经未配置的反向代理访问
+        (None, CDN_HOSTS),  # 拿不到地址
+    ],
+)
+async def test_resolve_video_picks_mirror_of_client_region(
+    bilibili: FakeBilibili, client_ip: str | None, hosts: tuple[str, ...]
 ) -> None:
-    async with make_resolver(bilibili, cdn_hosts=()) as resolver:
-        url = await resolver.resolve_video("BV1ex411J7GE", 2)
+    address = ip_address(client_ip) if client_ip else None
+
+    async with make_resolver(bilibili) as resolver:
+        url = await resolver.resolve_video("BV1ex411J7GE", 2, address)
+
+    assert urlsplit(url).netloc in hosts
+
+
+@pytest.mark.parametrize(
+    ("client_ip", "cdn_hosts", "cdn_overseas_hosts"),
+    [
+        (None, (), CDN_OVERSEAS_HOSTS),
+        ("8.8.8.8", CDN_HOSTS, ()),
+    ],
+)
+async def test_resolve_video_keeps_original_host_without_mirrors_for_region(
+    bilibili: FakeBilibili,
+    client_ip: str | None,
+    cdn_hosts: tuple[str, ...],
+    cdn_overseas_hosts: tuple[str, ...],
+) -> None:
+    address = ip_address(client_ip) if client_ip else None
+
+    async with make_resolver(bilibili, cdn_hosts, cdn_overseas_hosts) as resolver:
+        url = await resolver.resolve_video("BV1ex411J7GE", 2, address)
 
     assert url == ORIGINAL_VIDEO_URL
 
@@ -53,7 +99,7 @@ async def test_resolve_video_keeps_original_host_without_cdn_hosts(
 async def test_resolve_video_rejects_missing_page(bilibili: FakeBilibili) -> None:
     async with make_resolver(bilibili) as resolver:
         with pytest.raises(NotFoundError, match="视频 BV1ex411J7GE 没有第 4 P（共 3 P）"):
-            await resolver.resolve_video("BV1ex411J7GE", 4)
+            await resolver.resolve_video("BV1ex411J7GE", 4, None)
 
     assert not bilibili.requests_to(PLAYURL)
 
@@ -66,7 +112,7 @@ async def test_resolve_video_rejects_invalid_url(bilibili: FakeBilibili, url: st
 
     async with make_resolver(bilibili, cdn_hosts=()) as resolver:
         with pytest.raises(UpstreamError, match="无效的播放地址"):
-            await resolver.resolve_video("BV1ex411J7GE", 2)
+            await resolver.resolve_video("BV1ex411J7GE", 2, None)
 
 
 async def test_resolve_live_returns_hls_url_of_avc_stream(bilibili: FakeBilibili) -> None:

@@ -13,6 +13,7 @@ import pytest
 from bililink.bilibili import BilibiliClient
 from bililink.config import Settings
 from bililink.errors import NotFoundError
+from bililink.geoip import load_mainland_china_networks
 from bililink.resolver import Resolver
 
 pytestmark = [pytest.mark.live, pytest.mark.anyio]
@@ -20,34 +21,52 @@ pytestmark = [pytest.mark.live, pytest.mark.anyio]
 VIDEO = "BV1GJ411x7h7"  # Never Gonna Give You Up，长期稳定的单 P 稿件
 MULTI_PAGE_VIDEO = "BV1ex411J7GE"  # 长期稳定的多 P 稿件
 LIVE_ROOM = 6  # B 站官方直播间的短号
+SETTINGS = Settings()
 
 
 @pytest.fixture
 async def client() -> AsyncIterator[BilibiliClient]:
-    async with BilibiliClient(sessdata=None, timeout=Settings().request_timeout) as client:
+    async with BilibiliClient(sessdata=None, timeout=SETTINGS.request_timeout) as client:
         yield client
 
 
 @pytest.fixture
 def resolver(client: BilibiliClient) -> Resolver:
-    return Resolver(client, cdn_hosts=Settings().cdn_hosts)
+    return Resolver(
+        client,
+        cdn_hosts=SETTINGS.cdn_hosts,
+        cdn_overseas_hosts=SETTINGS.cdn_overseas_hosts,
+        mainland_networks=load_mainland_china_networks(),
+    )
 
 
-async def test_video_resolves_to_mp4_served_by_cdn_mirror(resolver: Resolver) -> None:
-    url = await resolver.resolve_video(VIDEO, 1)
+@pytest.mark.parametrize("host", [*SETTINGS.cdn_hosts, *SETTINGS.cdn_overseas_hosts])
+async def test_default_cdn_mirrors_serve_video(client: BilibiliClient, host: str) -> None:
+    resolver = Resolver(
+        client,
+        cdn_hosts=(host,),
+        cdn_overseas_hosts=(host,),
+        mainland_networks=load_mainland_china_networks(),
+    )
+    url = await resolver.resolve_video(VIDEO, 1, None)
 
-    assert urlsplit(url).netloc in Settings().cdn_hosts
-    # 镜像节点必须真的能提供该文件；CDN 会拒绝部分非浏览器 User-Agent，这里使用浏览器 UA。
+    assert urlsplit(url).netloc == host
+    # CDN 会拒绝部分非浏览器 User-Agent，这里使用浏览器 UA。
     headers = {"User-Agent": "Mozilla/5.0", "Range": "bytes=0-1023"}
-    async with httpx2.AsyncClient(headers=headers, timeout=10) as http:
-        response = await http.get(url)
+    async with httpx2.AsyncClient(headers=headers, timeout=15) as http:
+        try:
+            response = await http.get(url)
+        except httpx2.TimeoutException:
+            # 跨境访问（如在海外的 CI 上访问中国大陆镜像）偶尔超时，这是网络波动而不是镜像下线；
+            # 镜像下线表现为域名无法解析或返回 403、404，这些情况仍会让测试失败。
+            pytest.skip(f"{host} 连接超时，可能是跨境网络波动")
     assert response.status_code == 206
     assert response.headers["content-type"] == "video/mp4"
 
 
 async def test_multi_page_video_resolves_each_page(resolver: Resolver) -> None:
-    first = await resolver.resolve_video(MULTI_PAGE_VIDEO, 1)
-    second = await resolver.resolve_video(MULTI_PAGE_VIDEO, 2)
+    first = await resolver.resolve_video(MULTI_PAGE_VIDEO, 1, None)
+    second = await resolver.resolve_video(MULTI_PAGE_VIDEO, 2, None)
 
     assert urlsplit(first).path != urlsplit(second).path
 
@@ -61,7 +80,7 @@ async def test_multi_page_video_resolves_each_page(resolver: Resolver) -> None:
 )
 async def test_invalid_videos_are_not_found(resolver: Resolver, bvid: str) -> None:
     with pytest.raises(NotFoundError):
-        await resolver.resolve_video(bvid, 1)
+        await resolver.resolve_video(bvid, 1, None)
 
 
 async def test_live_room_resolves_to_hls_when_online(

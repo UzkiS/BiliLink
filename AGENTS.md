@@ -22,6 +22,7 @@ BiliLink 是一个 FastAPI 服务：把 B 站视频 BV 号或直播间号解析�
 | `uv run poe test-live` | 运行真实 B 站接口测试，检查上游接口是否变更 |
 | `uv run poe dev` | 本地开发：仅本机可访问，自动重载并开放 `/docs` |
 | `uv run poe env-example` | 修改配置项后重新生成 `.env.example` |
+| `uv run poe update-geoip` | 从 APNIC 下载最新数据，重新生成中国大陆 IP 段 |
 | `uv run pytest tests/test_api.py -k video` | 只运行部分测试（不统计覆盖率） |
 
 ## 目录结构与分层
@@ -31,8 +32,9 @@ src/bililink/
 ├── __main__.py        命令行入口：按配置启动 uvicorn
 ├── app.py             应用组装：生命周期、路由注册、统一异常处理
 ├── routes.py          HTTP 层：参数校验、依赖注入、响应转换
-├── resolver.py        业务层：选择分 P、改写 CDN、选择直播编码
+├── resolver.py        业务层：选择分 P、按访问者地区改写 CDN、选择直播编码
 ├── bilibili.py        B 站接口客户端：请求、响应解析、错误码映射
+├── geoip.py           判断 IP 是否属于中国大陆；cn_networks.txt 是它的数据（生成）
 ├── ratelimit.py       按客户端 IP 限流
 ├── errors.py          业务异常与错误响应格式
 ├── config.py          运行时配置
@@ -51,6 +53,7 @@ Dockerfile、compose.yaml  镜像构建与部署
 依赖方向只能是 `routes → resolver → bilibili`：
 
 - 只有 `bilibili.py` 访问 B 站；它只处理协议，不包含业务规则。
+- `geoip.py` 只回答“某个 IP 是否属于中国大陆”，按地区选择镜像的规则在 `resolver.py`。
 - `resolver.py` 不感知 Web 框架；`routes.py` 不包含业务逻辑。
 - 业务错误一律抛出 `errors.py` 中的异常，由 `app.py` 统一转换为错误响应；不要在路由中手写错误响应。
 - 配置只由 `app.py`、`__main__.py` 与 `healthcheck.py` 从 `Settings` 读取，再通过构造参数传给下层模块；
@@ -72,6 +75,7 @@ Dockerfile、compose.yaml  镜像构建与部署
 | 开发命令 | `[tool.poe.tasks]` | CI、本文件 |
 | 工具规则（ruff、mypy、pytest、coverage、deptry） | `pyproject.toml` | pre-commit、CI、编辑器 |
 | BV 号格式 | `bilibili.BVID_PATTERN` | 路由匹配、OpenAPI |
+| 中国大陆 IP 段 | APNIC 地址分配记录 | `src/bililink/cn_networks.txt`（由 `uv run poe update-geoip` 生成） |
 | 错误响应格式与状态码 | `errors.ErrorResponse`、`routes.py` 中声明的错误响应 | 异常处理器、OpenAPI、README 错误码表（测试保证一致） |
 | HTTP 接口契约 | `routes.py`（OpenAPI 由代码生成） | README 中的用法示例 |
 | 镜像地址 | `[project.urls].Repository`（CI 按仓库名发布） | README、`compose.yaml`（测试保证一致） |
@@ -126,7 +130,7 @@ Dockerfile、compose.yaml  镜像构建与部署
 - 镜像由 CI 自动发布到 `ghcr.io`（amd64 与 arm64），附带签名的构建来源证明：
   推送到 main 发布 `main` 标签；推送 `vX.Y.Z` 标签发布 `X.Y.Z`、`X.Y`、`X` 与 `latest`。检查未通过时不会发布。
 - 发布新版本：
-  1. 修改 `pyproject.toml` 中的 `version`，运行 `uv lock`；
+  1. 修改 `pyproject.toml` 中的 `version`，运行 `uv lock`；运行 `uv run poe update-geoip` 更新中国大陆 IP 段；
   2. 把 `CHANGELOG.md` 的 `[Unreleased]` 整理为新版本并提交；
   3. `git tag vX.Y.Z && git push origin main vX.Y.Z`（CI 会校验标签与 `version` 一致）。
 - 首次发布后，GHCR 上的镜像默认为私有：需要在 GitHub 的 Packages 页面把它的可见性改为 Public（一次性操作，不可撤销）。

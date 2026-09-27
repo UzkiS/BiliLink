@@ -16,6 +16,7 @@ from bililink import __version__
 from bililink.bilibili import BilibiliClient
 from bililink.config import Settings
 from bililink.errors import BiliLinkError, ErrorResponse
+from bililink.geoip import load_mainland_china_networks
 from bililink.ratelimit import RateLimiter
 from bililink.resolver import Resolver
 from bililink.routes import health_router, media_router
@@ -52,7 +53,12 @@ def create_app(
         async with BilibiliClient(
             sessdata=sessdata, timeout=settings.request_timeout, transport=transport
         ) as client:
-            app.state.resolver = Resolver(client, cdn_hosts=settings.cdn_hosts)
+            app.state.resolver = Resolver(
+                client,
+                cdn_hosts=settings.cdn_hosts,
+                cdn_overseas_hosts=settings.cdn_overseas_hosts,
+                mainland_networks=load_mainland_china_networks(),
+            )
             yield
 
     app = FastAPI(

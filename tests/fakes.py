@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import httpx2
 from fastapi.testclient import TestClient
@@ -18,7 +18,12 @@ PLAYURL = "/x/player/playurl"
 LIVE_ROOM_PLAY_INFO = "/xlive/web-room/v2/index/getRoomPlayInfo"
 
 type Handler = Callable[[httpx2.Request], httpx2.Response]
-type ClientFactory = Callable[[Settings], TestClient]
+
+
+class ClientFactory(Protocol):
+    """``make_client`` 夹具：按给定配置启动应用，``client_ip`` 为测试客户端的来源地址。"""
+
+    def __call__(self, settings: Settings, *, client_ip: str = ...) -> TestClient: ...
 
 
 def load_fixture(name: str) -> dict[str, Any]:

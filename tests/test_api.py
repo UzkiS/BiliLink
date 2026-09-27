@@ -34,6 +34,27 @@ def test_video_redirects_to_mp4_on_cdn_mirror(client: TestClient, bilibili: Fake
     assert request.url.params["cid"] == "66445301"
 
 
+@pytest.mark.parametrize(
+    ("client_ip", "setting"),
+    [
+        ("114.114.114.114", "cdn_hosts"),
+        ("8.8.8.8", "cdn_overseas_hosts"),
+        # 监听 IPv6 双栈地址时 IPv4 访问者的地址形式，同样按其 IPv4 地址判断地区。
+        ("::ffff:8.8.8.8", "cdn_overseas_hosts"),
+        ("2001:4860:4860::8888", "cdn_overseas_hosts"),
+    ],
+)
+def test_video_redirects_to_mirror_of_client_region(
+    make_client: ClientFactory, client_ip: str, setting: str
+) -> None:
+    client = make_client(Settings(), client_ip=client_ip)
+
+    response = client.get("/BV1ex411J7GE")
+
+    assert response.status_code == 307
+    assert urlsplit(response.headers["location"]).netloc in getattr(Settings(), setting)
+
+
 def test_video_page_parameter_selects_page(client: TestClient, bilibili: FakeBilibili) -> None:
     response = client.get("/BV1ex411J7GE", params={"p": 2})
 
