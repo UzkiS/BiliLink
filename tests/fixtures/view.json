@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "message": "OK",
+  "ttl": 1,
+  "data": {
+    "bvid": "BV1ex411J7GE",
+    "title": "Alan Becker 火柴人系列动画",
+    "pic": "http://i0.hdslb.com/bfs/archive/9b012055ff0928e863eb9f2da9c472387c39d9c7.jpg",
+    "pages": [
+      {
+        "cid": 66445301,
+        "page": 1,
+        "part": "00. 宣传短片",
+        "duration": 33
+      },
+      {
+        "cid": 35039663,
+        "page": 2,
+        "part": "01. 火柴人与动画师",
+        "duration": 133
+      },
+      {
+        "cid": 35039678,
+        "page": 3,
+        "part": "02. 火柴人与动画师 II",
+        "duration": 210
+      }
+    ]
+  }
+}

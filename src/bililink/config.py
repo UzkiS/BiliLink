@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     log_level: LogLevel = Field(
         default="INFO", description="日志级别：DEBUG、INFO、WARNING、ERROR 或 CRITICAL"
     )
+    web_enabled: bool = Field(default=True, description="是否开放网页界面（/）及其使用的 /api 接口")
     docs_enabled: bool = Field(
         default=False, description="是否开放 /docs 与 /openapi.json 接口文档"
     )

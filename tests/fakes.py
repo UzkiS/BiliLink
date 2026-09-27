@@ -15,6 +15,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 PAGELIST = "/x/player/pagelist"
 PLAYURL = "/x/player/playurl"
+VIDEO_INFO = "/x/web-interface/view"
 LIVE_ROOM_PLAY_INFO = "/xlive/web-room/v2/index/getRoomPlayInfo"
 
 type Handler = Callable[[httpx2.Request], httpx2.Response]
@@ -40,7 +41,7 @@ def error_payload(code: int, message: str) -> dict[str, Any]:
 class FakeBilibili:
     """按请求路径返回预设响应的 B 站接口替身，并记录收到的全部请求。
 
-    默认三个接口都返回正常的真实响应，测试只需覆盖自己关心的接口。
+    默认所有接口都返回正常的真实响应，测试只需覆盖自己关心的接口。
     """
 
     def __init__(self) -> None:
@@ -48,6 +49,7 @@ class FakeBilibili:
         self._handlers: dict[str, Handler] = {}
         self.respond_json(PAGELIST, load_fixture("pagelist.json"))
         self.respond_json(PLAYURL, load_fixture("playurl.json"))
+        self.respond_json(VIDEO_INFO, load_fixture("view.json"))
         self.respond_json(LIVE_ROOM_PLAY_INFO, load_fixture("live_room_online.json"))
 
     @property

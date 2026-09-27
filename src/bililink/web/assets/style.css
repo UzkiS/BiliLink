@@ -1,0 +1,736 @@
+/*
+ * BiliLink 网页界面，移动优先：
+ * - 手机与竖屏平板：内容自上而下排列，只有页面本身滚动；预览时视频吸附在屏幕顶部。
+ * - 宽屏（宽 ≥ 1024px 且高 ≥ 600px）：结果页正好占满一屏，页面不滚动；视频按可用高度尽量放大，
+ *   多 P 时选集位于右侧并在侧栏内滚动。
+ */
+
+:root {
+  color-scheme: light dark;
+  --background: #f4f5f7;
+  --surface: #ffffff;
+  --hover: #f1f2f3;
+  --text: #18191c;
+  --muted: #61666d;
+  --border: #e3e5e7;
+  --accent: #fb7299;
+  --accent-hover: #fc8bab;
+  --accent-soft: #fdeef3;
+  --on-accent: #ffffff;
+  --danger: #d0342c;
+  --radius: 10px;
+  font-family: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  line-height: 1.6;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111214;
+    --surface: #1c1d21;
+    --hover: #26282d;
+    --text: #e7e9ec;
+    --muted: #9499a0;
+    --border: #303238;
+    --accent-soft: #3a2430;
+    --danger: #ff6b6b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 作者样式中的 display 会覆盖 hidden 属性的默认效果。 */
+[hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--background);
+}
+
+.app {
+  position: relative;
+  max-width: 2400px;
+  padding: 12px;
+  margin: 0 auto;
+}
+
+/* ---------- 通用控件 ---------- */
+
+input[type="text"],
+input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 16px; /* 低于 16px 时 iOS 聚焦输入框会自动放大页面 */
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  flex: none;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--on-accent);
+  cursor: pointer;
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+button.secondary {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--border);
+}
+
+button.secondary:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+button.compact {
+  padding: 3px 10px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.field {
+  display: flex;
+  gap: 8px;
+}
+
+.meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.meta:empty {
+  display: none;
+}
+
+code,
+.link-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 顶栏 ---------- */
+
+.topbar {
+  display: grid;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.brand {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.brand a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.tagline,
+.examples {
+  margin: 0;
+  color: var(--muted);
+}
+
+#lookup {
+  display: flex;
+  gap: 8px;
+}
+
+.repo-link {
+  padding: 3px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.repo-link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.examples {
+  font-size: 14px;
+}
+
+.chip {
+  padding: 2px 12px;
+  margin: 4px 2px 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: 999px;
+}
+
+.chip:hover {
+  color: var(--accent);
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+/* 首页：标题、说明与输入框居中 */
+body:not(.has-result) .topbar {
+  max-width: 640px;
+  padding-top: 16vh;
+  margin: 0 auto;
+  text-align: center;
+  justify-items: center;
+}
+
+body:not(.has-result) .brand {
+  font-size: 40px;
+}
+
+body:not(.has-result) #lookup {
+  width: 100%;
+  margin-top: 8px;
+}
+
+body:not(.has-result) .repo-link {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+/* 结果页：收拢为顶栏 */
+body.has-result .topbar {
+  grid-template-areas:
+    "brand repo"
+    "form form";
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body.has-result .brand {
+  grid-area: brand;
+}
+
+body.has-result .repo-link {
+  grid-area: repo;
+}
+
+body.has-result #lookup {
+  grid-area: form;
+}
+
+body.has-result .tagline,
+body.has-result .examples {
+  display: none;
+}
+
+/* ---------- 结果：标题与视频 ---------- */
+
+#result {
+  margin-top: 16px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h2 a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* 手机上视频贴边显示；预览时吸附在屏幕顶部，往下翻选集也始终可见。 */
+.stage {
+  margin: 12px -12px 0;
+}
+
+.stage.active {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--background);
+}
+
+/*
+ * 视频高度不超过视口高度的 55%（此时按比例缩窄并居中）：横屏手机与矮窗口中，
+ * 吸附在顶部预览时下方仍能看到选集。svh 取浏览器工具栏展开时的高度，滚动时不会随之缩放。
+ */
+.screen {
+  position: relative;
+  width: min(100%, 55vh * 16 / 9);
+  width: min(100%, 55svh * 16 / 9);
+  margin: 0 auto;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #2e3038, #121316);
+}
+
+#cover,
+#player {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#cover {
+  object-fit: cover;
+}
+
+#player {
+  background: #000000;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #ffffff;
+  text-align: center;
+  background: linear-gradient(rgb(0 0 0 / 10%), rgb(0 0 0 / 55%));
+}
+
+.play-button {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+}
+
+.play-button svg {
+  width: 30px;
+  height: 30px;
+  margin-left: 4px;
+  fill: #ffffff;
+}
+
+#stage-caption {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
+  white-space: nowrap;
+}
+
+#stage-caption.error {
+  color: #ffb4b4;
+  white-space: normal;
+}
+
+.stop-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgb(0 0 0 / 55%);
+  border-radius: 50%;
+}
+
+.stop-button:hover {
+  background: rgb(0 0 0 / 75%);
+}
+
+.stop-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-width: 2.4;
+}
+
+/* ---------- 当前链接 ---------- */
+
+.current-link {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.current-label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 选集 ---------- */
+
+.episodes {
+  padding: 12px;
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.episodes-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.episodes-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+#episode-count {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.search {
+  position: relative;
+  display: flex;
+  margin-top: 10px;
+}
+
+.search svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  fill: var(--muted);
+  transform: translateY(-50%);
+}
+
+.search input {
+  padding-left: 36px;
+}
+
+#pages {
+  position: relative;
+  padding: 0;
+  margin: 8px 0 0;
+  list-style: none;
+}
+
+#pages li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+}
+
+#pages li:first-child {
+  border-top: 0;
+}
+
+.row-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 8px;
+  font-weight: 400;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.row-main:hover {
+  background: var(--hover);
+}
+
+#pages li.selected .row-main {
+  background: var(--accent-soft);
+}
+
+#pages li.selected .link-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.link-badge {
+  min-width: 3.4em;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+}
+
+.link-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-duration {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.notes span + span {
+  margin-left: 8px;
+}
+
+/* ---------- 提示 ---------- */
+
+/* 复制结果与错误提示：固定在视口底部，滚动到哪里都看得见。 */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 10;
+  max-width: calc(100% - 32px);
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--surface);
+  background: var(--text);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+#toast.error {
+  color: #ffffff;
+  background: var(--danger);
+}
+
+/* 复制用的临时文本框：必须在文档中才能被选中，但不应出现在页面上。 */
+.offscreen {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+}
+
+/* ---------- 平板与桌面：放宽间距 ---------- */
+
+@media (min-width: 640px) {
+  .app {
+    padding: 16px 24px;
+  }
+
+  body:not(.has-result) .repo-link {
+    top: 16px;
+    right: 24px;
+  }
+
+  body.has-result .topbar {
+    grid-template-areas: "brand form repo";
+    grid-template-columns: auto minmax(0, 720px) auto;
+    justify-content: space-between;
+  }
+
+  .stage {
+    margin: 12px 0 0;
+  }
+
+  .screen {
+    border-radius: 12px;
+  }
+
+  .current-link {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .current-label {
+    max-width: 40%;
+  }
+
+  .current-link .field {
+    flex: 1;
+  }
+}
+
+/* ---------- 宽屏：结果页占满一屏，页面不滚动 ---------- */
+
+@media (min-width: 1024px) and (min-height: 600px) {
+  body.has-result .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  body.has-result #result {
+    flex: 1;
+    min-height: 0;
+    container-type: size;
+  }
+
+  /*
+   * 视频宽度取以下几项中的最小值：--stage-max（超大屏上预览不必再放大）、
+   * 结果区宽度（多 P 时减去选集栏）、结果区高度扣除标题与链接等固定部分（--chrome）后按 16:9 换算的宽度。
+   * 因此标题、视频与链接的总高度始终不超过一屏。
+   */
+  .layout {
+    --gap: 20px;
+    --sidebar: clamp(300px, 26vw, 400px);
+    --chrome: 160px;
+    --stage-max: 1600px;
+    --stage: min(var(--stage-max), 100cqw, (100cqh - var(--chrome)) * 16 / 9);
+
+    display: grid;
+    grid-template-areas:
+      "head"
+      "stage"
+      "current"
+      "notes";
+    grid-template-columns: var(--stage);
+    align-content: start;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* 多 P：视频与选集并排且等高，标题、链接与说明横跨两栏。 */
+  .layout.multi {
+    --stage: min(var(--stage-max), 100cqw - var(--sidebar) - var(--gap), (100cqh - var(--chrome)) * 16 / 9);
+
+    grid-template-areas:
+      "head head"
+      "stage episodes"
+      "current current"
+      "notes notes";
+    grid-template-columns: var(--stage) var(--sidebar);
+    column-gap: var(--gap);
+  }
+
+  .result-head {
+    grid-area: head;
+  }
+
+  /* 标题固定为一行，保证 --chrome 估算的高度准确；完整标题见鼠标悬停提示。 */
+  h2 {
+    overflow: hidden;
+    line-height: 28px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stage {
+    grid-area: stage;
+  }
+
+  .stage.active {
+    position: static;
+  }
+
+  /* 视频尺寸已由 --stage 按一屏计算，不再受上面窄屏时的高度限制。 */
+  .screen {
+    width: auto;
+  }
+
+  .current-link {
+    grid-area: current;
+  }
+
+  /* 说明固定为一行：空间不足时只截断说明文字（完整内容见鼠标悬停提示），链接格式始终完整显示。 */
+  .notes {
+    display: flex;
+    grid-area: notes;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  #result-hint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #pattern-note {
+    flex: none;
+  }
+
+  /* contain: size 让选集不参与行高计算，行高只由视频决定，选集再拉伸到同样的高度。 */
+  .episodes {
+    display: flex;
+    flex-direction: column;
+    grid-area: episodes;
+    min-height: 0;
+    margin: 12px 0 0;
+    contain: size;
+  }
+
+  #pages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

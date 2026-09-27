@@ -71,6 +71,16 @@ async def test_multi_page_video_resolves_each_page(resolver: Resolver) -> None:
     assert urlsplit(first).path != urlsplit(second).path
 
 
+async def test_video_info_lists_every_page(client: BilibiliClient) -> None:
+    info = await client.get_video_info(MULTI_PAGE_VIDEO)
+
+    assert info.title
+    assert info.pic.startswith("https://")
+    assert [page.page for page in info.pages] == list(range(1, len(info.pages) + 1))
+    assert len(info.pages) > 1
+    assert all(page.part and page.duration > 0 for page in info.pages)
+
+
 @pytest.mark.parametrize(
     "bvid",
     [
@@ -78,9 +88,13 @@ async def test_multi_page_video_resolves_each_page(resolver: Resolver) -> None:
         "BV1zzzzzzzzz",  # 格式合法但不对应任何稿件：-400
     ],
 )
-async def test_invalid_videos_are_not_found(resolver: Resolver, bvid: str) -> None:
+async def test_invalid_videos_are_not_found(
+    client: BilibiliClient, resolver: Resolver, bvid: str
+) -> None:
     with pytest.raises(NotFoundError):
         await resolver.resolve_video(bvid, 1, None)
+    with pytest.raises(NotFoundError):
+        await client.get_video_info(bvid)
 
 
 async def test_live_room_resolves_to_hls_when_online(

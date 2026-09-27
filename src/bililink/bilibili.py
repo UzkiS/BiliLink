@@ -11,7 +11,15 @@ from types import TracebackType
 from typing import Annotated, Self
 
 import httpx2
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+)
 
 from bililink.errors import NotFoundError, UpstreamError
 
@@ -42,8 +50,9 @@ _NOT_FOUND_CODES = frozenset(
         62012,  # 仅 UP 主自己可见
     }
 )
-# pagelist 唯一的参数是已通过格式校验的 BV 号，此时 -400 说明它不对应任何稿件（如 BV1zzzzzzzzz）。
-_PAGELIST_NOT_FOUND_CODES = _NOT_FOUND_CODES | {-400}
+# pagelist 与 view 唯一的参数是已通过格式校验的 BV 号，
+# 此时 -400 说明它不对应任何稿件（如 BV1zzzzzzzzz）。
+_BVID_NOT_FOUND_CODES = _NOT_FOUND_CODES | {-400}
 
 type NonEmpty[T] = Annotated[tuple[T, ...], Field(min_length=1)]
 type _QueryParams = Mapping[str, str | int]
@@ -68,6 +77,29 @@ class VideoPage(_Model):
 
     cid: int
     page: int
+
+
+class VideoPart(_Model):
+    """视频信息中的一个分 P。"""
+
+    page: int
+    part: str  # 分 P 标题
+    duration: int  # 时长（秒）
+
+
+class VideoInfo(_Model):
+    """视频的标题、封面与分 P 列表。"""
+
+    title: str
+    pic: str  # 封面图片地址
+    pages: NonEmpty[VideoPart]
+
+    @field_validator("pic")
+    @classmethod
+    def _use_https(cls, value: str) -> str:
+        # view 接口返回 http:// 的封面地址，同一地址也支持 https（实测）；
+        # 统一改为 https，避免在 HTTPS 页面中被当作混合内容拦截。
+        return f"https://{value.removeprefix('http://')}" if value.startswith("http://") else value
 
 
 class VideoSegment(_Model):
@@ -128,6 +160,7 @@ class LiveRoomPlayInfo(_Model):
 
 
 _VIDEO_PAGES = TypeAdapter(tuple[VideoPage, ...])
+_VIDEO_INFO = TypeAdapter(VideoInfo)
 _VIDEO_PLAY_INFO = TypeAdapter(VideoPlayInfo)
 _LIVE_ROOM_PLAY_INFO = TypeAdapter(LiveRoomPlayInfo)
 
@@ -171,7 +204,17 @@ class BilibiliClient:
             f"{_API_BASE}/x/player/pagelist",
             {"bvid": bvid},
             _VIDEO_PAGES,
-            not_found_codes=_PAGELIST_NOT_FOUND_CODES,
+            not_found_codes=_BVID_NOT_FOUND_CODES,
+        )
+
+    async def get_video_info(self, bvid: str) -> VideoInfo:
+        """获取视频的标题、封面与分 P 列表。"""
+        # 实测不带 WBI 签名的 view 接口仍然可用，签名只是 /wbi/view 等接口的要求。
+        return await self._get(
+            f"{_API_BASE}/x/web-interface/view",
+            {"bvid": bvid},
+            _VIDEO_INFO,
+            not_found_codes=_BVID_NOT_FOUND_CODES,
         )
 
     async def get_video_play_info(self, bvid: str, cid: int) -> VideoPlayInfo:

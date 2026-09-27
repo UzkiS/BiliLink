@@ -22,6 +22,7 @@ def test_reads_prefixed_environment_variables(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("BILILINK_LOG_LEVEL", "debug")
     monkeypatch.setenv("BILILINK_CDN_HOSTS", '["mirror.example.com:8443"]')
     monkeypatch.setenv("BILILINK_CDN_OVERSEAS_HOSTS", "[]")
+    monkeypatch.setenv("BILILINK_WEB_ENABLED", "false")
     monkeypatch.setenv("PORT", "9999")
 
     settings = Settings()
@@ -30,6 +31,7 @@ def test_reads_prefixed_environment_variables(monkeypatch: pytest.MonkeyPatch) -
     assert settings.log_level == "DEBUG"
     assert settings.cdn_hosts == ("mirror.example.com:8443",)
     assert settings.cdn_overseas_hosts == ()
+    assert settings.web_enabled is False
 
 
 def test_reads_dotenv_in_working_directory(tmp_path: Path) -> None:

@@ -1,6 +1,10 @@
 # 通用文件检查使用 pre-commit-hooks；ruff、mypy 以 local hook 运行 uv.lock 中锁定的版本，
 # 保证本地、pre-commit 与 CI 使用同一份工具版本（唯一事实源：pyproject.toml + uv.lock）。
 # 运行方式见 pyproject.toml 中的 [tool.poe.tasks]。
+
+# 随包内置的第三方前端库保持与上游发布文件逐字节一致，不做任何检查与修改。
+exclude: ^src/bililink/web/assets/vendor/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0

@@ -4,7 +4,7 @@ import random
 from collections.abc import Sequence
 from urllib.parse import urlsplit
 
-from bililink.bilibili import BilibiliClient, LiveCodec, LivePlayUrl
+from bililink.bilibili import BilibiliClient, LiveCodec, LivePlayUrl, VideoInfo
 from bililink.errors import NotFoundError, UpstreamError
 from bililink.geoip import IPAddress, MainlandChinaNetworks
 
@@ -27,6 +27,10 @@ class Resolver:
         self._cdn_hosts = tuple(cdn_hosts)
         self._cdn_overseas_hosts = tuple(cdn_overseas_hosts)
         self._mainland_networks = mainland_networks
+
+    async def get_video_info(self, bvid: str) -> VideoInfo:
+        """返回视频的标题、封面与分 P 列表。"""
+        return await self._client.get_video_info(bvid)
 
     async def resolve_video(self, bvid: str, page: int, client_ip: IPAddress | None) -> str:
         """返回视频第 ``page`` P（从 1 开始）的 MP4 直链，CDN 镜像按访问者所在地区选择。"""

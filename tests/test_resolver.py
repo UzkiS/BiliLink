@@ -10,7 +10,7 @@ import pytest
 from bililink.errors import NotFoundError, UpstreamError
 from bililink.geoip import MainlandChinaNetworks
 from bililink.resolver import Resolver
-from fakes import LIVE_ROOM_PLAY_INFO, PLAYURL, FakeBilibili, load_fixture
+from fakes import LIVE_ROOM_PLAY_INFO, PLAYURL, VIDEO_INFO, FakeBilibili, load_fixture
 
 pytestmark = pytest.mark.anyio
 
@@ -33,6 +33,16 @@ async def make_resolver(
             cdn_overseas_hosts=cdn_overseas_hosts,
             mainland_networks=MAINLAND_NETWORKS,
         )
+
+
+async def test_get_video_info_returns_title_and_pages(bilibili: FakeBilibili) -> None:
+    async with make_resolver(bilibili) as resolver:
+        info = await resolver.get_video_info("BV1ex411J7GE")
+
+    assert info.title == "Alan Becker 火柴人系列动画"
+    assert [page.page for page in info.pages] == [1, 2, 3]
+    [request] = bilibili.requests_to(VIDEO_INFO)
+    assert request.url.params["bvid"] == "BV1ex411J7GE"
 
 
 async def test_resolve_video_uses_cid_of_requested_page(bilibili: FakeBilibili) -> None:

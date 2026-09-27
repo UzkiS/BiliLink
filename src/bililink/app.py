@@ -19,7 +19,7 @@ from bililink.errors import BiliLinkError, ErrorResponse
 from bililink.geoip import load_mainland_china_networks
 from bililink.ratelimit import RateLimiter
 from bililink.resolver import Resolver
-from bililink.routes import health_router, media_router
+from bililink.routes import api_router, health_router, media_router, web_assets, web_router
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,10 @@ def create_app(
     app.state.rate_limiter = RateLimiter(settings.rate_limit)
     app.include_router(health_router)
     app.include_router(media_router)
+    if settings.web_enabled:
+        app.include_router(api_router)
+        app.include_router(web_router)
+        app.mount("/assets", web_assets, name="assets")
     return app
 
 

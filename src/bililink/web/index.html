@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>BiliLink</title>
+    <!-- 必须在解析任何相对地址之前执行，因此内联在这里；CSP 按内容哈希放行（见 routes.py）。 -->
+    <script>
+      // 经反向代理挂载在子路径下、访问地址末尾又没有斜杠时（如 https://a.com/bili），
+      // 相对地址会解析到上一级目录；补上 <base>，让资源与生成的链接都落在本服务的路径下。
+      if (!location.pathname.endsWith("/")) {
+        const base = document.createElement("base");
+        base.href = location.pathname + "/";
+        document.head.append(base);
+      }
+    </script>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/style.css">
+    <script type="module" src="assets/app.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <!-- 首页时标题与输入框居中显示；有结果后收拢为顶栏。 -->
+      <header class="topbar">
+        <h1 class="brand"><a href="./">BiliLink</a></h1>
+        <p class="tagline">把 B 站视频或直播间变成可直接播放的链接</p>
+        <form id="lookup" autocomplete="off">
+          <label class="visually-hidden" for="query">视频或直播间</label>
+          <input id="query" name="q" type="text" required
+                 placeholder="BV 号、视频网址、直播间号或直播间网址">
+          <button id="submit" type="submit">生成链接</button>
+        </form>
+        <p class="examples">
+          试试：
+          <button class="chip" type="button" data-example="BV1GJ411x7h7">单 P 视频</button>
+          <button class="chip" type="button" data-example="https://www.bilibili.com/video/BV1ex411J7GE">多 P 视频</button>
+          <button class="chip" type="button" data-example="https://live.bilibili.com/6">直播间</button>
+        </p>
+        <a class="repo-link" href="{{ repository_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </header>
+
+      <section id="result" hidden>
+        <!-- 宽屏时视频与选集（仅多 P）左右并排、等高，标题与链接横跨整行；窄屏时自上而下排列。 -->
+        <div id="layout" class="layout">
+          <div class="result-head">
+            <h2><a id="result-title" target="_blank" rel="noopener noreferrer"></a></h2>
+            <p id="result-meta" class="meta"></p>
+          </div>
+
+          <div id="stage" class="stage">
+            <div class="screen">
+              <img id="cover" alt="" hidden>
+              <video id="player" controls playsinline hidden></video>
+              <div id="overlay" class="overlay">
+                <button id="play" class="play-button" type="button" aria-label="预览">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+                </button>
+                <p id="stage-caption" role="status" aria-live="polite"></p>
+              </div>
+              <button id="stop" class="stop-button" type="button" aria-label="关闭预览" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="current-link">
+            <span id="current-label" class="current-label" hidden></span>
+            <div class="field">
+              <input id="current-url" class="link-url" type="text" readonly aria-label="链接">
+              <button id="copy-current" type="button">复制链接</button>
+            </div>
+          </div>
+          <p class="meta notes">
+            <span id="result-hint"></span>
+            <span id="pattern-note" hidden>链接格式：<code id="link-pattern"></code></span>
+          </p>
+
+          <aside id="episodes" class="episodes" aria-label="选集" hidden>
+            <div class="episodes-head">
+              <h3>选集<span id="episode-count"></span></h3>
+              <button id="copy-all" class="secondary compact" type="button">复制全部</button>
+            </div>
+            <div class="search">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M6.5 1a5.5 5.5 0 0 1 4.38 8.83l3.9 3.9-1.06 1.06-3.9-3.9A5.5 5.5 0 1 1 6.5 1zm0 1.5a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/>
+              </svg>
+              <input id="filter" type="search" aria-label="按标题、序号或范围筛选分 P"
+                     placeholder="标题/序号/10-20">
+            </div>
+            <ol id="pages"></ol>
+          </aside>
+        </div>
+      </section>
+
+      <noscript><p class="meta">网页界面需要启用 JavaScript。</p></noscript>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+
+    <template id="page-template">
+      <li>
+        <button class="row-main" type="button" data-action="preview">
+          <span class="link-badge"></span>
+          <span class="link-title"></span>
+          <span class="link-duration"></span>
+        </button>
+        <button class="secondary compact" type="button" data-action="copy">复制</button>
+      </li>
+    </template>
+  </body>
+</html>

@@ -1,12 +1,22 @@
 """B 站接口客户端：请求参数、响应解析与错误映射。"""
 
 import re
+from collections.abc import Awaitable, Callable
 
 import httpx2
 import pytest
 
+from bililink.bilibili import BilibiliClient
 from bililink.errors import NotFoundError, UpstreamError
-from fakes import LIVE_ROOM_PLAY_INFO, PAGELIST, PLAYURL, FakeBilibili, error_payload, load_fixture
+from fakes import (
+    LIVE_ROOM_PLAY_INFO,
+    PAGELIST,
+    PLAYURL,
+    VIDEO_INFO,
+    FakeBilibili,
+    error_payload,
+    load_fixture,
+)
 
 pytestmark = pytest.mark.anyio
 
@@ -22,6 +32,36 @@ async def test_get_video_pages(bilibili: FakeBilibili) -> None:
     ]
     [request] = bilibili.requests
     assert request.url.params["bvid"] == "BV1ex411J7GE"
+
+
+async def test_get_video_info(bilibili: FakeBilibili) -> None:
+    async with bilibili.client() as client:
+        info = await client.get_video_info("BV1ex411J7GE")
+
+    assert info.title == "Alan Becker 火柴人系列动画"
+    # view 返回 http:// 的封面地址，统一改为 https，避免 HTTPS 页面拦截混合内容。
+    assert info.pic == (
+        "https://i0.hdslb.com/bfs/archive/9b012055ff0928e863eb9f2da9c472387c39d9c7.jpg"
+    )
+    assert [(page.page, page.part, page.duration) for page in info.pages] == [
+        (1, "00. 宣传短片", 33),
+        (2, "01. 火柴人与动画师", 133),
+        (3, "02. 火柴人与动画师 II", 210),
+    ]
+    [request] = bilibili.requests
+    assert request.url.path == VIDEO_INFO
+    assert request.url.params["bvid"] == "BV1ex411J7GE"
+
+
+async def test_https_cover_is_kept_unchanged(bilibili: FakeBilibili) -> None:
+    payload = load_fixture("view.json")
+    payload["data"]["pic"] = "https://i1.hdslb.com/bfs/archive/cover.jpg"
+    bilibili.respond_json(VIDEO_INFO, payload)
+
+    async with bilibili.client() as client:
+        info = await client.get_video_info("BV1ex411J7GE")
+
+    assert info.pic == "https://i1.hdslb.com/bfs/archive/cover.jpg"
 
 
 async def test_sends_browser_headers_and_no_cookie_by_default(bilibili: FakeBilibili) -> None:
@@ -94,13 +134,22 @@ async def test_not_found_codes_raise_not_found_error(
             await client.get_video_pages("BV1ex411J7GE")
 
 
-async def test_rejected_bvid_raises_not_found_error(bilibili: FakeBilibili) -> None:
-    # 格式合法但不对应任何稿件的 BV 号（如 BV1zzzzzzzzz），pagelist 返回 -400。
-    bilibili.respond_json(PAGELIST, error_payload(-400, "请求错误"))
+@pytest.mark.parametrize(
+    ("path", "lookup"),
+    [
+        (PAGELIST, BilibiliClient.get_video_pages),
+        (VIDEO_INFO, BilibiliClient.get_video_info),
+    ],
+)
+async def test_rejected_bvid_raises_not_found_error(
+    bilibili: FakeBilibili, path: str, lookup: Callable[[BilibiliClient, str], Awaitable[object]]
+) -> None:
+    # 格式合法但不对应任何稿件的 BV 号（如 BV1zzzzzzzzz），pagelist 与 view 都返回 -400。
+    bilibili.respond_json(path, error_payload(-400, "请求错误"))
 
     async with bilibili.client() as client:
         with pytest.raises(NotFoundError, match=re.escape("请求错误（B 站错误码 -400）")):
-            await client.get_video_pages("BV1zzzzzzzzz")
+            await lookup(client, "BV1zzzzzzzzz")
 
 
 async def test_other_error_codes_raise_upstream_error(bilibili: FakeBilibili) -> None:

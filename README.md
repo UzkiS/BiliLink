@@ -10,6 +10,8 @@
 - **视频**：`/{BV号}` 重定向到音视频合一的 MP4 直链，`?p=` 指定分 P；
   直链域名按访问者所在地区改写为 CDN 镜像节点（见 [CDN 节点](#cdn-节点)）。
 - **直播**：`/live/{直播间号}` 重定向到 HLS（m3u8）直播流，支持短号，优先选择 H.264 编码。
+- **网页界面**：粘贴 BV 号、视频网址、直播间号或直播间网址即可生成链接；自动列出全部分 P，
+  可逐条复制或一键复制全部，也可以直接预览视频与直播。
 - **限流**：按客户端 IP 限流（规则可配置），可正确识别反向代理之后的真实 IP。
 - **运维**：统一的 JSON 错误响应、`/healthz` 健康检查、可选的 OpenAPI 文档。
 
@@ -62,7 +64,12 @@ uv run --no-dev bililink
 | `GET /BV1GJ411x7h7` | 307 → 第 1 P 的 MP4 直链 |
 | `GET /BV1ex411J7GE?p=3` | 307 → 第 3 P 的 MP4 直链 |
 | `GET /live/6` | 307 → 直播间 6 的 m3u8 地址 |
+| `GET /` | 网页界面 |
+| `GET /api/video/BV1ex411J7GE` | 200，视频标题、封面与分 P 列表（JSON），供网页界面使用 |
 | `GET /healthz` | 200 `{"status": "ok"}` |
+
+网页界面生成的都是指向本服务的链接：每次播放时重新解析，因此可以长期使用、分享给他人。
+只需要重定向服务时，可以设置 `BILILINK_WEB_ENABLED=false` 关闭网页界面及其使用的 `/api` 接口。
 
 ```bash
 curl -i http://127.0.0.1:5000/BV1GJ411x7h7
@@ -100,6 +107,23 @@ curl -fsSL https://raw.githubusercontent.com/UzkiS/BiliLink/main/.env.example -o
 
 注意这里填的是**容器内看到的**代理地址：宿主机上的代理访问容器时，来源通常是 Docker 网桥网关（默认 `172.17.0.1`，
 Compose 网络为 `172.16.0.0/12` 网段内的地址）。不确定时，查看服务日志中请求的来源地址即可。
+
+网页界面生成的链接以页面自身的地址为前缀，因此服务可以部署在根域名、子域名或子路径下，无需额外配置。
+部署在子路径（如 `https://a.com/bili/`）下时，反向代理需要去掉路径前缀后再转发：
+
+```nginx
+location /bili/ {
+    proxy_pass http://127.0.0.1:5000/;  # 末尾的 / 表示去掉 /bili 前缀
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+```caddyfile
+redir /bili /bili/
+handle_path /bili/* {
+    reverse_proxy 127.0.0.1:5000
+}
+```
 
 在 Kubernetes 中部署时，如果 Service 名为 `bililink`，Kubernetes 自动注入的 `BILILINK_PORT` 等环境变量会与配置冲突，
 请在 Pod 中设置 `enableServiceLinks: false`。

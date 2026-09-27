@@ -38,7 +38,8 @@ src/bililink/
 ├── ratelimit.py       按客户端 IP 限流
 ├── errors.py          业务异常与错误响应格式
 ├── config.py          运行时配置
-└── healthcheck.py     容器健康检查命令
+├── healthcheck.py     容器健康检查命令
+└── web/               网页界面：index.html 与 assets/（脚本、样式；vendor/ 为第三方库）
 tests/
 ├── fakes.py           B 站接口替身（httpx2.MockTransport）
 ├── fixtures/          录制自真实接口的响应（已裁剪、脱敏）
@@ -74,11 +75,12 @@ Dockerfile、compose.yaml  镜像构建与部署
 | 配置项、默认值与说明 | `src/bililink/config.py` | `.env.example`（生成）；README、`compose.yaml` 中的端口（测试保证一致） |
 | 开发命令 | `[tool.poe.tasks]` | CI、本文件 |
 | 工具规则（ruff、mypy、pytest、coverage、deptry） | `pyproject.toml` | pre-commit、CI、编辑器 |
-| BV 号格式 | `bilibili.BVID_PATTERN` | 路由匹配、OpenAPI |
+| BV 号格式 | `bilibili.BVID_PATTERN` | 路由匹配、OpenAPI；网页脚本中的副本（测试保证一致） |
 | 中国大陆 IP 段 | APNIC 地址分配记录 | `src/bililink/cn_networks.txt`（由 `uv run poe update-geoip` 生成） |
+| 第三方前端库（hls.js）的版本 | `src/bililink/web/assets/vendor/` 中的发布文件本身 | — |
 | 错误响应格式与状态码 | `errors.ErrorResponse`、`routes.py` 中声明的错误响应 | 异常处理器、OpenAPI、README 错误码表（测试保证一致） |
 | HTTP 接口契约 | `routes.py`（OpenAPI 由代码生成） | README 中的用法示例 |
-| 镜像地址 | `[project.urls].Repository`（CI 按仓库名发布） | README、`compose.yaml`（测试保证一致） |
+| 仓库地址 | `[project.urls].Repository`（CI 按仓库名发布镜像） | README、`compose.yaml` 中的镜像地址（测试保证一致）；网页中的 GitHub 链接（运行时从包元数据读取） |
 | B 站接口的非显然行为 | `bilibili.py` 中对应代码旁的注释 | — |
 | 工程规范 | 本文件 | `CLAUDE.md` |
 
@@ -120,6 +122,13 @@ Dockerfile、compose.yaml  镜像构建与部署
 - `BILILINK_FORWARDED_ALLOW_IPS` 只能填写真实反向代理的地址，否则客户端可以伪造 IP 绕过限流。
 - 重定向目标只能来自 B 站接口的返回值，并且必须通过绝对 http(s) 地址校验；不开启尾部斜杠自动重定向。
 - Docker 镜像以非 root 的数字 UID 运行；`.dockerignore` 是白名单，新增构建所需文件时显式加入。
+- 网页只加载本服务的脚本与样式（由 CSP 限制），不引用任何外部 CDN，以免页面受第三方影响、在国内无法加载；
+  唯一的内联脚本（子路径部署时修正相对地址）按内容哈希放行，哈希由 `routes.py` 自动计算。
+  展示 B 站返回的标题等外部数据时只使用 `textContent`，不拼接 HTML。
+- 网页中的地址一律使用相对路径，生成的链接也相对于页面地址计算，不在服务端拼接域名或路径前缀，
+  以保证部署在根域名、子域名、反向代理子路径下都正确。
+- 第三方前端库随包内置在 `web/assets/vendor/`，与 npm 上的发布文件逐字节一致（pre-commit 不检查该目录），
+  并附带其许可证。更新时从 npm 下载发布包，核对 `integrity` 后整体替换对应文件。
 - GitHub Actions 以完整 commit SHA 固定版本；会发布镜像的 `ci.yml` 不使用任何缓存，防止缓存投毒。
 
 ## 提交与发布

@@ -10,6 +10,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from bililink.app import create_app
+from bililink.bilibili import BVID_PATTERN
 from bililink.config import Settings, render_env_example
 
 ROOT = Path(__file__).parents[1]
@@ -63,4 +64,10 @@ def test_image_name_matches_repository(name: str) -> None:
 
     assert set(re.findall(r"ghcr\.io/[\w./-]+?(?=:)", read(name))) == {image}, (
         f"{name} 中的镜像地址应为 {image}（由 pyproject.toml 的仓库地址决定）"
+    )
+
+
+def test_web_page_uses_bvid_pattern() -> None:
+    assert f'const BVID_PATTERN = "{BVID_PATTERN}";' in read("src/bililink/web/assets/app.js"), (
+        "网页识别 BV 号所用的正则应与 bilibili.BVID_PATTERN 一致"
     )
