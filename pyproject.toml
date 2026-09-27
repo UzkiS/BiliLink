@@ -1,6 +1,6 @@
 [project]
 name = "bililink"
-version = "1.1.0"
+version = "1.1.1"
 description = "B 站视频 / 直播直链解析服务：把 BV 号或直播间号重定向到可直接播放的媒体地址"
 readme = "README.md"
 license = "GPL-3.0-only"

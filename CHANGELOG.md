@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-27
+
 ### 变更
 
 - B 站接口返回 HTTP 412（风控拦截）时，错误信息改为说明这通常是服务器的出口 IP 被 B 站限制、需要更换出口 IP，
@@ -88,6 +90,7 @@
 
 - 复用 HTTP 连接池；不再为每个请求抓取一次 B 站首页以获取 Cookie（实测接口不需要这些 Cookie）。
 
-[Unreleased]: https://github.com/UzkiS/BiliLink/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/UzkiS/BiliLink/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/UzkiS/BiliLink/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/UzkiS/BiliLink/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/UzkiS/BiliLink/releases/tag/v1.0.0
