@@ -37,6 +37,11 @@ curl -fsSLO https://raw.githubusercontent.com/UzkiS/BiliLink/main/compose.yaml
 docker compose up -d
 ```
 
+`compose.yaml` 使用宿主机网络（`network_mode: host`）：服务直接监听宿主机端口，不经过 Docker 的端口映射
+（端口映射会绕过 ufw 等防火墙的规则），访问由系统防火墙与云服务器安全组控制。
+监听端口由 `compose.yaml` 中的 `BILILINK_PORT` 给出，更换端口时在 `.env` 中设置 `BILILINK_PORT` 即可；
+容器以非 root 用户运行，不能使用 1024 以下的端口。
+
 更新到最新版本：
 
 ```bash
@@ -110,13 +115,14 @@ curl -fsSL https://raw.githubusercontent.com/UzkiS/BiliLink/main/.env.example -o
 ### 部署在反向代理之后
 
 限流与 [CDN 节点](#cdn-节点)的地区判断依据的都是客户端 IP。部署在 Nginx、Caddy 等反向代理之后时，
-必须把 `BILILINK_FORWARDED_ALLOW_IPS` 设置为反向代理的地址，否则：
+必须把 `BILILINK_FORWARDED_ALLOW_IPS` 设置为反向代理的地址：
 
-- 保持默认值：所有请求都被视为来自代理，共享同一份限流配额，并且都按中国大陆访问者选择 CDN 节点；
-- 设置为 `*`：任何客户端都能伪造 `X-Forwarded-For` 绕过限流（仅当服务只能经由代理访问时才可以这样设置）。
+- 没有包含代理的地址时，所有请求都被视为来自代理，共享同一份限流配额，并且都按中国大陆访问者选择 CDN 节点；
+- 设置为 `*` 时，任何客户端都能伪造 `X-Forwarded-For` 绕过限流（仅当服务只能经由代理访问时才可以这样设置）。
 
-注意这里填的是**容器内看到的**代理地址：宿主机上的代理访问容器时，来源通常是 Docker 网桥网关（默认 `172.17.0.1`，
-Compose 网络为 `172.16.0.0/12` 网段内的地址）。不确定时，查看服务日志中请求的来源地址即可。
+注意这里填的是**服务看到的**代理地址。代理与服务在同一台机器上时，用 Compose 部署（宿主机网络）
+看到的是 `127.0.0.1`；用 `docker run -p` 部署时，来源通常是 Docker 网桥网关（默认 `172.17.0.1`）。
+不确定时，查看服务日志中请求的来源地址即可。
 
 网页界面生成的链接以页面自身的地址为前缀，因此服务可以部署在根域名、子域名或子路径下，无需额外配置。
 部署在子路径（如 `https://a.com/bili/`）下时，反向代理需要去掉路径前缀后再转发：

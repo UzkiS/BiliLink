@@ -4,9 +4,13 @@ services:
   bililink:
     image: ghcr.io/uzkis/bililink:latest
     restart: unless-stopped
-    ports:
-      # 宿主机端口:容器端口。需要换对外端口时只改左边的数字。
-      - "5000:5000"
+    # 使用宿主机网络：不创建单独的 Docker 网络，也没有端口映射（端口映射会绕过 ufw 等防火墙的规则），
+    # 服务直接监听宿主机端口，访问由系统防火墙与云服务器安全组控制。
+    network_mode: host
+    environment:
+      # 监听端口：更换时在 .env 中设置 BILILINK_PORT。
+      # 容器以非 root 用户运行，不能使用 1024 以下的端口。
+      - BILILINK_PORT=${BILILINK_PORT:-5000}
     env_file:
       - path: .env
         required: false

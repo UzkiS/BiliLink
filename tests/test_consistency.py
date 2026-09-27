@@ -39,7 +39,8 @@ def test_docker_image_uses_supported_uv_version() -> None:
 
 @pytest.mark.parametrize("name", ["README.md", "compose.yaml"])
 def test_examples_use_default_port(name: str) -> None:
-    ports = set(re.findall(r":(\d{4,5})\b", read(name)))
+    # 形如“地址:端口”“-p 端口:端口”，以及 compose.yaml 中的默认值写法 ${BILILINK_PORT:-端口}。
+    ports = set(re.findall(r":-?(\d{4,5})\b", read(name)))
 
     assert ports == {str(Settings().port)}, f"{name} 中示例使用的端口应与默认端口一致"
 
