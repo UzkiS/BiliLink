@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-27
+
 ### 新增
 
 - 网页界面（`/`）：粘贴 BV 号、视频网址、直播间号或直播间网址即可生成链接；自动列出全部分 P，
@@ -75,5 +77,6 @@
 
 - 复用 HTTP 连接池；不再为每个请求抓取一次 B 站首页以获取 Cookie（实测接口不需要这些 Cookie）。
 
-[Unreleased]: https://github.com/UzkiS/BiliLink/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/UzkiS/BiliLink/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/UzkiS/BiliLink/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/UzkiS/BiliLink/releases/tag/v1.0.0
