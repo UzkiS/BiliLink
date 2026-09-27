@@ -38,6 +38,10 @@ _DEFAULT_HEADERS = {
     "Referer": "https://www.bilibili.com/",
 }
 
+# 请求头合规时仍返回 412，说明服务器的出口 IP 被 B 站风控了。实测此时带上 SESSDATA 也会被拦截，
+# 只能更换出口 IP，因此错误信息直接给出这一提示，而不只是转述状态码。
+_RISK_CONTROL_HTTP_STATUS = 412
+
 # 表示“资源不存在或当前无法观看”的业务错误码映射为 404，其余非 0 错误码一律视为上游故障（502）。
 _NOT_FOUND_CODES = frozenset(
     {
@@ -263,7 +267,13 @@ class BilibiliClient:
             response = await self._http.get(url, params=params)
             response.raise_for_status()
         except httpx2.HTTPStatusError as exc:
-            msg = f"B 站接口返回 HTTP {exc.response.status_code}"
+            if exc.response.status_code == _RISK_CONTROL_HTTP_STATUS:
+                msg = (
+                    "B 站接口返回 HTTP 412（风控拦截），通常是服务器出口 IP 被 B 站限制，"
+                    "请更换服务器 IP 或网络后重试"
+                )
+            else:
+                msg = f"B 站接口返回 HTTP {exc.response.status_code}"
             raise UpstreamError(msg) from exc
         except httpx2.HTTPError as exc:
             msg = f"无法连接 B 站接口（{type(exc).__name__}）"

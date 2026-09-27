@@ -19,6 +19,16 @@
 
 镜像发布在 GitHub Container Registry，支持 x86_64（amd64）与 ARM64。
 
+部署前，先在服务器上确认它能正常访问 B 站接口：
+
+```bash
+curl -sS -o /dev/null -w "%{http_code}\n" -A "Mozilla/5.0" -e "https://www.bilibili.com/" \
+  "https://api.bilibili.com/x/web-interface/view?bvid=BV1GJ411x7h7"
+```
+
+输出 `200` 即可部署；输出 `412` 说明这台服务器的出口 IP 已被 B 站风控，部署后也无法解析视频，
+需要更换服务器或网络（见[常见问题](#常见问题)）。
+
 ### Docker Compose（推荐）
 
 ```bash
@@ -164,6 +174,12 @@ B 站 CDN 会拒绝部分程序默认的 User-Agent（实测 curl、VLC、ffmpeg
 vlc --http-user-agent="Mozilla/5.0" http://127.0.0.1:5000/BV1GJ411x7h7
 ffmpeg -user_agent "Mozilla/5.0" -i http://127.0.0.1:5000/BV1GJ411x7h7 video.mp4
 ```
+
+**返回 502，提示“B 站接口返回 HTTP 412（风控拦截）”？**
+
+B 站会拦截它认为可疑的请求并返回 HTTP 412。BiliLink 发出的请求已经带有浏览器的请求头，持续出现这个错误，
+说明服务器的出口 IP 被 B 站风控了。这无法通过修改配置解决，设置 `BILILINK_SESSDATA` 也一样，
+只能更换服务器或网络；更换前可以先用[部署](#部署)一节开头的命令测试新的服务器。
 
 ## 开发
 

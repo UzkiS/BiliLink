@@ -153,16 +153,18 @@ def test_upstream_failure_returns_502_and_logs_warning(
     client: TestClient, bilibili: FakeBilibili, caplog: pytest.LogCaptureFixture
 ) -> None:
     bilibili.respond_with(PAGELIST, lambda _: httpx2.Response(412, html="<!DOCTYPE html>"))
+    error = (
+        "B 站接口返回 HTTP 412（风控拦截），通常是服务器出口 IP 被 B 站限制，"
+        "请更换服务器 IP 或网络后重试"
+    )
 
     with caplog.at_level(logging.WARNING, logger="bililink"):
         response = client.get("/BV1ex411J7GE")
 
     assert response.status_code == 502
-    assert response.json() == {"error": "B 站接口返回 HTTP 412"}
+    assert response.json() == {"error": error}
     [message] = caplog.messages
-    assert message.startswith(
-        "GET /BV1ex411J7GE 失败：B 站接口返回 HTTP 412（原因：HTTPStatusError("
-    )
+    assert message.startswith(f"GET /BV1ex411J7GE 失败：{error}（原因：HTTPStatusError(")
 
 
 def test_upstream_error_code_is_logged_without_cause(

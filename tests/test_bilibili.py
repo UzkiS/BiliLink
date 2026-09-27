@@ -188,12 +188,21 @@ async def test_bad_request_on_play_url_raises_upstream_error(bilibili: FakeBilib
             await client.get_video_play_info("BV1ex411J7GE", 35039663)
 
 
-async def test_http_error_status_raises_upstream_error(bilibili: FakeBilibili) -> None:
-    # B 站风控拦截时返回 HTTP 412 与一个 HTML 页面。
-    bilibili.respond_with(PAGELIST, lambda _: httpx2.Response(412, html="<!DOCTYPE html>"))
+@pytest.mark.parametrize(
+    ("status_code", "message"),
+    [
+        # 风控拦截（HTTP 412）返回 HTML 而不是 JSON，提示要说明这是出口 IP 的问题。
+        (412, "B 站接口返回 HTTP 412（风控拦截），通常是服务器出口 IP 被 B 站限制"),
+        (500, "B 站接口返回 HTTP 500"),
+    ],
+)
+async def test_http_error_status_raises_upstream_error(
+    bilibili: FakeBilibili, status_code: int, message: str
+) -> None:
+    bilibili.respond_with(PAGELIST, lambda _: httpx2.Response(status_code, html="<!DOCTYPE html>"))
 
     async with bilibili.client() as client:
-        with pytest.raises(UpstreamError, match="HTTP 412"):
+        with pytest.raises(UpstreamError, match=re.escape(message)):
             await client.get_video_pages("BV1ex411J7GE")
 
 
