@@ -29,7 +29,9 @@ BVID_PATTERN = "BV[1-9A-HJ-NP-Za-km-z]{10}"
 _API_BASE = "https://api.bilibili.com"
 _LIVE_API_BASE = "https://api.live.bilibili.com"
 
-# 不带浏览器 User-Agent 的请求会被 B 站风控拦截（HTTP 412）；有 UA 时无需任何 Cookie。
+# B 站会以 HTTP 412 拦截 User-Agent 含 python 字样（不区分大小写）的请求，httpx2 的默认值
+# python-httpx2/… 也在其中。实测这条规则只看 UA 字符串，与 TLS 指纹无关：curl 等程序的默认 UA、
+# 甚至不带 UA 都能正常访问。因此改用浏览器的 UA；游客请求不需要 buvid3 等 Cookie。
 _DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
