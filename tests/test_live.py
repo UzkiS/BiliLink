@@ -91,9 +91,10 @@ async def test_video_info_lists_every_page(client: BilibiliClient) -> None:
 async def test_invalid_videos_are_not_found(
     client: BilibiliClient, resolver: Resolver, bvid: str
 ) -> None:
-    with pytest.raises(NotFoundError):
+    # 断言具体提示：只有 -404、-400 会被识别为“视频不存在”，可以借此发现错误码含义的变化。
+    with pytest.raises(NotFoundError, match=f"视频 {bvid} 不存在"):
         await resolver.resolve_video(bvid, 1, None)
-    with pytest.raises(NotFoundError):
+    with pytest.raises(NotFoundError, match=f"视频 {bvid} 不存在"):
         await client.get_video_info(bvid)
 
 

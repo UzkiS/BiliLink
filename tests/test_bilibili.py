@@ -115,7 +115,6 @@ async def test_offline_live_room_has_no_play_url(bilibili: FakeBilibili) -> None
 @pytest.mark.parametrize(
     ("code", "message"),
     [
-        (-404, "啥都木有"),
         (-403, "访问权限不足"),
         (-10403, "抱歉您所在地区不能观看！"),
         (60004, "房间不存在"),
@@ -127,6 +126,7 @@ async def test_offline_live_room_has_no_play_url(bilibili: FakeBilibili) -> None
 async def test_not_found_codes_raise_not_found_error(
     bilibili: FakeBilibili, code: int, message: str
 ) -> None:
+    # 这些提示本身说明了无法观看的原因，原样保留。
     bilibili.respond_json(PAGELIST, error_payload(code, message))
 
     async with bilibili.client() as client:
@@ -141,14 +141,24 @@ async def test_not_found_codes_raise_not_found_error(
         (VIDEO_INFO, BilibiliClient.get_video_info),
     ],
 )
-async def test_rejected_bvid_raises_not_found_error(
-    bilibili: FakeBilibili, path: str, lookup: Callable[[BilibiliClient, str], Awaitable[object]]
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        (-404, "啥都木有"),  # 不存在的稿件
+        (-400, "请求错误"),  # 格式合法但不对应任何稿件的 BV 号，如 BV1zzzzzzzzz
+    ],
+)
+async def test_missing_video_raises_not_found_error(
+    bilibili: FakeBilibili,
+    path: str,
+    lookup: Callable[[BilibiliClient, str], Awaitable[object]],
+    code: int,
+    message: str,
 ) -> None:
-    # 格式合法但不对应任何稿件的 BV 号（如 BV1zzzzzzzzz），pagelist 与 view 都返回 -400。
-    bilibili.respond_json(path, error_payload(-400, "请求错误"))
+    bilibili.respond_json(path, error_payload(code, message))
 
     async with bilibili.client() as client:
-        with pytest.raises(NotFoundError, match=re.escape("请求错误（B 站错误码 -400）")):
+        with pytest.raises(NotFoundError, match="视频 BV1zzzzzzzzz 不存在"):
             await lookup(client, "BV1zzzzzzzzz")
 
 
@@ -158,6 +168,15 @@ async def test_other_error_codes_raise_upstream_error(bilibili: FakeBilibili) ->
     async with bilibili.client() as client:
         with pytest.raises(UpstreamError, match=re.escape("风控校验失败（错误码 -352）")):
             await client.get_video_pages("BV1ex411J7GE")
+
+
+async def test_not_found_on_play_url_keeps_upstream_message(bilibili: FakeBilibili) -> None:
+    # 只有按 BV 号查询的接口才改写“不存在”的提示。
+    bilibili.respond_json(PLAYURL, error_payload(-404, "啥都木有"))
+
+    async with bilibili.client() as client:
+        with pytest.raises(NotFoundError, match=re.escape("啥都木有（B 站错误码 -404）")):
+            await client.get_video_play_info("BV1ex411J7GE", 35039663)
 
 
 async def test_bad_request_on_play_url_raises_upstream_error(bilibili: FakeBilibili) -> None:

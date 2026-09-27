@@ -133,7 +133,7 @@ def test_upstream_not_found_returns_404(client: TestClient, bilibili: FakeBilibi
     response = client.get("/BV1ex411J7GE")
 
     assert response.status_code == 404
-    assert response.json() == {"error": "啥都木有（B 站错误码 -404）"}
+    assert response.json() == {"error": "视频 BV1ex411J7GE 不存在"}
 
 
 def test_rejected_bvid_returns_404_without_warning(
@@ -145,7 +145,7 @@ def test_rejected_bvid_returns_404_without_warning(
         response = client.get("/BV1zzzzzzzzz")
 
     assert response.status_code == 404
-    assert response.json() == {"error": "请求错误（B 站错误码 -400）"}
+    assert response.json() == {"error": "视频 BV1zzzzzzzzz 不存在"}
     assert not caplog.messages
 
 
@@ -386,7 +386,7 @@ def test_video_info_api_returns_404_for_missing_video(
     response = client.get("/api/video/BV1ex411J7GE")
 
     assert response.status_code == 404
-    assert response.json() == {"error": "啥都木有（B 站错误码 -404）"}
+    assert response.json() == {"error": "视频 BV1ex411J7GE 不存在"}
 
 
 def test_video_info_api_shares_rate_limit_with_media_routes(make_client: ClientFactory) -> None:

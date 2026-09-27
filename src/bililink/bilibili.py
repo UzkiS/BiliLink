@@ -50,9 +50,9 @@ _NOT_FOUND_CODES = frozenset(
         62012,  # 仅 UP 主自己可见
     }
 )
-# pagelist 与 view 唯一的参数是已通过格式校验的 BV 号，
-# 此时 -400 说明它不对应任何稿件（如 BV1zzzzzzzzz）。
-_BVID_NOT_FOUND_CODES = _NOT_FOUND_CODES | {-400}
+# pagelist 与 view 唯一的参数是已通过格式校验的 BV 号，此时 -404（啥都木有）与 -400（请求错误）
+# 都说明它不对应任何稿件（如 BV1zzzzzzzzz）。这两条提示让人看不懂，因此改为明确说明视频不存在。
+_VIDEO_MISSING_CODES = frozenset({-404, -400})
 
 type NonEmpty[T] = Annotated[tuple[T, ...], Field(min_length=1)]
 type _QueryParams = Mapping[str, str | int]
@@ -204,7 +204,7 @@ class BilibiliClient:
             f"{_API_BASE}/x/player/pagelist",
             {"bvid": bvid},
             _VIDEO_PAGES,
-            not_found_codes=_BVID_NOT_FOUND_CODES,
+            missing_message=f"视频 {bvid} 不存在",
         )
 
     async def get_video_info(self, bvid: str) -> VideoInfo:
@@ -214,7 +214,7 @@ class BilibiliClient:
             f"{_API_BASE}/x/web-interface/view",
             {"bvid": bvid},
             _VIDEO_INFO,
-            not_found_codes=_BVID_NOT_FOUND_CODES,
+            missing_message=f"视频 {bvid} 不存在",
         )
 
     async def get_video_play_info(self, bvid: str, cid: int) -> VideoPlayInfo:
@@ -253,9 +253,12 @@ class BilibiliClient:
         params: _QueryParams,
         data_type: TypeAdapter[T],
         *,
-        not_found_codes: frozenset[int] = _NOT_FOUND_CODES,
+        missing_message: str | None = None,
     ) -> T:
-        """请求接口并返回校验后的 ``data``；任何失败都转换为业务异常。"""
+        """请求接口并返回校验后的 ``data``；任何失败都转换为业务异常。
+
+        ``missing_message`` 供按 BV 号查询的接口使用：稿件不存在时以它作为错误信息。
+        """
         try:
             response = await self._http.get(url, params=params)
             response.raise_for_status()
@@ -272,7 +275,9 @@ class BilibiliClient:
             msg = "B 站接口返回了无法识别的数据"
             raise UpstreamError(msg) from exc
 
-        if envelope.code in not_found_codes:
+        if missing_message is not None and envelope.code in _VIDEO_MISSING_CODES:
+            raise NotFoundError(missing_message)
+        if envelope.code in _NOT_FOUND_CODES:
             msg = f"{envelope.message}（B 站错误码 {envelope.code}）"
             raise NotFoundError(msg)
         if envelope.code != 0:
