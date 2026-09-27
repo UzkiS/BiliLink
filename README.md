@@ -157,7 +157,8 @@ CDN 会把观看者调度到就近的节点。按观看者 IP 判断地区后：
 **浏览器能播放，但 VLC、ffmpeg 或 curl 访问时返回 403？**
 
 B 站 CDN 会拒绝部分程序默认的 User-Agent（实测 curl、VLC、ffmpeg 的默认值会被拒绝，浏览器与 mpv 正常），
-这是上游的行为。为播放器设置一个浏览器 User-Agent 即可，最简单的 `Mozilla/5.0` 就能通过：
+这是上游的行为。BiliLink 只返回重定向，之后由播放器直接连接 B 站 CDN 并发送它自己的 User-Agent，
+服务端无法代为设置。为播放器设置一个浏览器 User-Agent 即可，最简单的 `Mozilla/5.0` 就能通过：
 
 ```bash
 vlc --http-user-agent="Mozilla/5.0" http://127.0.0.1:5000/BV1GJ411x7h7
