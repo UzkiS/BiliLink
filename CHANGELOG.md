@@ -3,6 +3,19 @@
 本项目的重要变更都记录在此文件中。
 更新记录由 release-please 根据 Conventional Commits 自动生成，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0](https://github.com/UzkiS/BiliLink/compare/v1.1.1...v1.2.0) (2026-09-30)
+
+
+### 新增
+
+* 网页增加支持项目入口 ([a64fd5f](https://github.com/UzkiS/BiliLink/commit/a64fd5f8bcd8eb847d0a49d2701a22f778381d81))
+* 自动维护运行时中国大陆 IP 段 ([c400851](https://github.com/UzkiS/BiliLink/commit/c4008519af9137a2b2b18bfedb2c2816c281d29c))
+
+
+### 修复
+
+* 修复网页首页与结果页的窄屏横向溢出 ([cd43079](https://github.com/UzkiS/BiliLink/commit/cd43079ea61daeb4d2f743a40def2002dbb1beeb))
+
 ## [1.1.1] - 2026-09-27
 
 ### 变更
