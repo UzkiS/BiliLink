@@ -1,5 +1,6 @@
 """唯一事实源守护：由定义处派生或引用定义处的文件，必须与定义保持一致。"""
 
+import json
 import re
 import tomllib
 from http import HTTPStatus
@@ -53,7 +54,9 @@ def test_readme_documents_every_error_status() -> None:
         for status in operation["get"]["responses"]
         if int(status) >= HTTPStatus.BAD_REQUEST
     }
-    readme_errors = {int(s) for s in re.findall(r"^\| (\d{3}) \|", read("README.md"), re.MULTILINE)}
+    readme_errors = {
+        int(s) for s in re.findall(r"^\| (\d{3})\s+\|", read("README.md"), re.MULTILINE)
+    }
 
     assert readme_errors == api_errors, "README 的错误码表应与 routes.py 中声明的错误响应一致"
 
@@ -72,3 +75,22 @@ def test_web_page_uses_bvid_pattern() -> None:
     assert f'const BVID_PATTERN = "{BVID_PATTERN}";' in read("src/bililink/web/assets/app.js"), (
         "网页识别 BV 号所用的正则应与 bilibili.BVID_PATTERN 一致"
     )
+
+
+def test_release_metadata_matches_project() -> None:
+    project = tomllib.loads(read("pyproject.toml"))["project"]
+    config = json.loads(read("release-please-config.json"))
+    manifest = json.loads(read(".release-please-manifest.json"))
+
+    assert config["packages"]["."]["release-type"] == "python"
+    assert config["packages"]["."]["package-name"] == project["name"]
+    assert manifest["."] == project["version"]
+    assert config["include-component-in-tag"] is False
+    assert config["include-v-in-tag"] is True
+
+
+def test_release_notes_include_only_user_visible_changes() -> None:
+    sections = json.loads(read("release-please-config.json"))["changelog-sections"]
+    visible = {section["type"] for section in sections if not section.get("hidden", False)}
+
+    assert visible == {"feat", "fix", "perf"}

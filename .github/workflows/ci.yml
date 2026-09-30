@@ -6,6 +6,11 @@ on:
     tags: ["v*.*.*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      prepare-release:
+        description: 维护版本 PR 与 Release（仅 main，发布中断时可手动恢复）
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -71,8 +76,10 @@ jobs:
 
   publish:
     name: 发布镜像到 GHCR
-    # 只在推送到 main 或推送版本标签时发布；PR 只检查、不发布。
-    if: github.event_name == 'push'
+    # 版本发布工作流使用默认令牌创建标签后会显式调度 CI；版本 PR 的调度只检查。
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag')
     needs: [check, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -144,3 +151,60 @@ jobs:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+  release:
+    name: 维护版本 PR 与 Release
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || inputs.prepare-release == true)
+    needs: [check, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # release-please 不管理 uv.lock；在版本 PR 内运行 uv 生成锁文件，并更新内置 IP 段。
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          enable-cache: false
+
+      - name: 准备版本 PR 并调度检查
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+        run: |
+          uv run poe release-prepare
+          if ! git diff --quiet -- uv.lock src/bililink/cn_networks.txt; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add uv.lock src/bililink/cn_networks.txt
+            git commit -m 'chore: 同步版本锁文件与内置 IP 段'
+            git -c credential.helper='!gh auth git-credential' push origin "HEAD:$RELEASE_BRANCH"
+          fi
+          # 默认令牌产生的 push/PR 事件不会触发其他工作流，显式调度到版本 PR 的最新提交。
+          gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+
+      - name: 调度正式镜像发布
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh workflow run ci.yml --ref "$RELEASE_TAG"

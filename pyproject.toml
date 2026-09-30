@@ -1,7 +1,7 @@
 [project]
 name = "bililink"
 version = "1.1.1"
-description = "B 站视频 / 直播直链解析服务：把 BV 号或直播间号重定向到可直接播放的媒体地址"
+description = "Bilibili（哔哩哔哩／B 站）视频与直播直链解析服务：BV 号转 MP4，直播间转 HLS（m3u8），支持分 P、网页预览与 Docker 部署。"
 readme = "README.md"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
@@ -82,6 +82,10 @@ cmd = "python scripts/gen_env_example.py"
 [tool.poe.tasks.update-geoip]
 help = "从 APNIC 下载最新数据，重新生成中国大陆 IP 段（src/bililink/cn_networks.txt）"
 cmd = "python scripts/update_geoip.py"
+
+[tool.poe.tasks.release-prepare]
+help = "准备版本 PR：同步锁文件、更新内置 IP 段并完成全部检查"
+sequence = [{ cmd = "uv lock" }, "update-geoip", "check"]
 
 # ---------------------------------------------------------------------------
 # 工具配置

@@ -1,6 +1,6 @@
 # 中国大陆（APNIC 国家代码 CN）的 IP 段。
 # 由 `uv run poe update-geoip` 生成，请勿手动编辑。
-# 数据来源：https://ftp.apnic.net/stats/apnic/delegated-apnic-latest（20260927 版）
+# 数据来源：https://ftp.apnic.net/stats/apnic/delegated-apnic-latest（20260930 版）
 1.0.1.0/24
 1.0.2.0/23
 1.0.8.0/21

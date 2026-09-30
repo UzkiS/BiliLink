@@ -1,9 +1,7 @@
 # 更新日志
 
 本项目的重要变更都记录在此文件中。
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
-
-## [Unreleased]
+更新记录由 release-please 根据 Conventional Commits 自动生成，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [1.1.1] - 2026-09-27
 
@@ -90,7 +88,6 @@
 
 - 复用 HTTP 连接池；不再为每个请求抓取一次 B 站首页以获取 Cookie（实测接口不需要这些 Cookie）。
 
-[Unreleased]: https://github.com/UzkiS/BiliLink/compare/v1.1.1...HEAD
 [1.1.1]: https://github.com/UzkiS/BiliLink/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/UzkiS/BiliLink/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/UzkiS/BiliLink/releases/tag/v1.0.0

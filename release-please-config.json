@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "7e791bb6bedc99dad9f2b85fedab90fd3fc8a974",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "pull-request-title-pattern": "chore${scope}: 发布 ${version}",
+  "pull-request-header": "本 PR 自动整理版本号与用户可见的变更。",
+  "pull-request-footer": "由 release-please 生成；检查通过并合并后自动发布。",
+  "changelog-sections": [
+    { "type": "feat", "section": "新增" },
+    { "type": "fix", "section": "修复" },
+    { "type": "perf", "section": "性能" },
+    { "type": "docs", "section": "文档", "hidden": true },
+    { "type": "build", "section": "构建", "hidden": true },
+    { "type": "ci", "section": "持续集成", "hidden": true },
+    { "type": "chore", "section": "维护", "hidden": true },
+    { "type": "refactor", "section": "重构", "hidden": true },
+    { "type": "test", "section": "测试", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "bililink"
+    }
+  }
+}

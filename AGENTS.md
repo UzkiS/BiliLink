@@ -23,6 +23,7 @@ BiliLink 是一个 FastAPI 服务：把 B 站视频 BV 号或直播间号解析�
 | `uv run poe dev` | 本地开发：仅本机可访问，自动重载并开放 `/docs` |
 | `uv run poe env-example` | 修改配置项后重新生成 `.env.example` |
 | `uv run poe update-geoip` | 从 APNIC 下载最新数据，重新生成中国大陆 IP 段 |
+| `uv run poe release-prepare` | 版本 PR 自动执行：同步锁文件、更新内置 IP 段并完成全部检查 |
 | `uv run pytest tests/test_api.py -k video` | 只运行部分测试（不统计覆盖率） |
 
 ## 目录结构与分层
@@ -35,6 +36,7 @@ src/bililink/
 ├── resolver.py        业务层：选择分 P、按访问者地区改写 CDN、选择直播编码
 ├── bilibili.py        B 站接口客户端：请求、响应解析、错误码映射
 ├── geoip.py           判断 IP 是否属于中国大陆；cn_networks.txt 是它的数据（生成）
+├── geoip_update.py    后台更新 APNIC 数据、热替换内存快照与可选缓存
 ├── ratelimit.py       按客户端 IP 限流
 ├── errors.py          业务异常与错误响应格式
 ├── config.py          运行时配置
@@ -47,7 +49,7 @@ tests/
 ├── test_consistency.py  唯一事实源守护测试
 └── test_*.py
 scripts/               开发脚本（不随包发布）
-.github/workflows/     ci.yml：检查、镜像冒烟测试与发布；live.yml：每日真实接口巡检
+.github/workflows/     ci.yml：检查、版本 PR、Release 与镜像发布；live.yml：每日接口巡检
 Dockerfile、compose.yaml  镜像构建与部署
 ```
 
@@ -68,7 +70,7 @@ Dockerfile、compose.yaml  镜像构建与部署
 
 | 事实 | 定义位置 | 派生物 / 引用方 |
 | --- | --- | --- |
-| 项目版本 | `pyproject.toml` 的 `[project].version` | `bililink.__version__`、OpenAPI、镜像标签（发布时校验 `vX.Y.Z` 与之一致） |
+| 项目版本 | `pyproject.toml` 的 `[project].version` | `bililink.__version__`、OpenAPI、镜像标签（发布时校验 `vX.Y.Z` 与之一致）；release-please 自动更新版本并记录发布状态 |
 | 依赖与开发工具版本 | `pyproject.toml` + `uv.lock` | Docker 镜像、pre-commit 的 local hooks、CI |
 | Python 版本 | `.python-version`（开发、CI 与镜像使用的版本）；`requires-python`（最低版本） | CI、Docker 镜像 |
 | uv 版本 | `[tool.uv].required-version`（版本范围） | CI（setup-uv）；Dockerfile 固定的版本（测试保证在范围内） |
@@ -76,7 +78,7 @@ Dockerfile、compose.yaml  镜像构建与部署
 | 开发命令 | `[tool.poe.tasks]` | CI、本文件 |
 | 工具规则（ruff、mypy、pytest、coverage、deptry） | `pyproject.toml` | pre-commit、CI、编辑器 |
 | BV 号格式 | `bilibili.BVID_PATTERN` | 路由匹配、OpenAPI；网页脚本中的副本（测试保证一致） |
-| 中国大陆 IP 段 | APNIC 地址分配记录 | `src/bililink/cn_networks.txt`（由 `uv run poe update-geoip` 生成） |
+| 中国大陆 IP 段 | APNIC 地址分配记录 | `src/bililink/cn_networks.txt`（由 `uv run poe update-geoip` 生成的初始数据）；运行时由 `geoip_update.py` 定期下载更新 |
 | 第三方前端库（hls.js）的版本 | `src/bililink/web/assets/vendor/` 中的发布文件本身 | — |
 | 错误响应格式与状态码 | `errors.ErrorResponse`、`routes.py` 中声明的错误响应 | 异常处理器、OpenAPI、README 错误码表（测试保证一致） |
 | HTTP 接口契约 | `routes.py`（OpenAPI 由代码生成） | README 中的用法示例 |
@@ -135,13 +137,20 @@ Dockerfile、compose.yaml  镜像构建与部署
 
 - 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/)：
   `feat`、`fix`、`perf`、`refactor`、`test`、`docs`、`build`、`ci`、`chore`；描述使用中文，一个提交只做一件事。
-- 用户可见的变更（接口行为、配置项、部署方式）写入 `CHANGELOG.md` 的 `[Unreleased]`。
+- 用户可见的变更用 `feat`、`fix`、`perf` 提交，release-please 自动整理为中文 `CHANGELOG.md` 与 Release 说明；
+  `docs`、`build`、`ci`、`chore`、`refactor`、`test` 不写入用户更新记录，不手工维护版本条目。
 - 镜像由 CI 自动发布到 `ghcr.io`（amd64 与 arm64），附带签名的构建来源证明：
   推送到 main 发布 `main` 标签；推送 `vX.Y.Z` 标签发布 `X.Y.Z`、`X.Y`、`X` 与 `latest`。检查未通过时不会发布。
 - 发布新版本：
-  1. 修改 `pyproject.toml` 中的 `version`，运行 `uv lock`；运行 `uv run poe update-geoip` 更新中国大陆 IP 段；
-  2. 把 `CHANGELOG.md` 的 `[Unreleased]` 整理为新版本并提交；
-  3. `git tag vX.Y.Z && git push origin main vX.Y.Z`（CI 会校验标签与 `version` 一致）。
+  1. 推送或合并变更到 main，CI 检查和镜像冒烟测试通过后，release-please 自动创建或更新版本 PR；
+  2. 版本 PR 自动更新 `pyproject.toml`、发布状态与 `CHANGELOG.md`，再执行 `uv run poe release-prepare`
+     同步 `uv.lock`、刷新内置 IP 段并检查，工作流显式调度版本 PR 的 CI；
+  3. 检查版本 PR 并合并；main 的 CI 通过后自动创建 `vX.Y.Z` 标签与 GitHub Release，
+     再调度标签的 CI 发布正式镜像，无需手动修改版本、编写更新记录或推送标签。
+  `release-please-config.json` 定义版本规则与更新记录分组；`.release-please-manifest.json` 是自动维护的发布状态。
+  仓库需允许 GitHub Actions 创建 PR。工作流使用默认 `GITHUB_TOKEN`，通过 `workflow_dispatch` 显式触发
+  后续检查与发布，避免默认令牌创建的 PR／标签无法自动触发其他工作流的问题，无需额外个人访问令牌。
+  发布中断时，可手动调度 main 的 CI，勾选 `prepare-release` 以恢复版本 PR 与 Release 维护。
 - 首次发布后，GHCR 上的镜像默认为私有：需要在 GitHub 的 Packages 页面把它的可见性改为 Public（一次性操作，不可撤销）。
 
 ## 完成标准
@@ -152,4 +161,4 @@ Dockerfile、compose.yaml  镜像构建与部署
 2. 新行为有测试，覆盖率保持 100%；修改了 B 站相关逻辑时，`uv run poe test-live` 也通过。
 3. 修改了配置项：已运行 `uv run poe env-example`。
 4. 修改了依赖：通过 `uv add` / `uv remove` 完成，`uv.lock` 已一并提交。
-5. 用户可见的变化：已更新 `README.md` 与 `CHANGELOG.md`。
+5. 用户可见的变化：已更新 `README.md`，提交类型与描述足够准确，便于自动生成 `CHANGELOG.md`。
