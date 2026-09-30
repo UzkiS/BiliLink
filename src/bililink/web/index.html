@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>BiliLink</title>
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ project_description }}">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:description" content="{{ project_description }}">
     <!-- 必须在解析任何相对地址之前执行，因此内联在这里；CSP 按内容哈希放行（见 routes.py）。 -->
     <script>
       // 经反向代理挂载在子路径下、访问地址末尾又没有斜杠时（如 https://a.com/bili），
@@ -24,7 +29,7 @@
       <!-- 首页时标题与输入框居中显示；有结果后收拢为顶栏。 -->
       <header class="topbar">
         <h1 class="brand"><a href="./">BiliLink</a></h1>
-        <p class="tagline">把 B 站视频或直播间变成可直接播放的链接</p>
+        <p class="tagline">把 Bilibili（B 站）视频转为 MP4 直链，直播间转为 HLS（m3u8）播放链接</p>
         <form id="lookup" autocomplete="off">
           <label class="visually-hidden" for="query">视频或直播间</label>
           <input id="query" name="q" type="text" required
@@ -37,7 +42,10 @@
           <button class="chip" type="button" data-example="https://www.bilibili.com/video/BV1ex411J7GE">多 P 视频</button>
           <button class="chip" type="button" data-example="https://live.bilibili.com/6">直播间</button>
         </p>
-        <a class="repo-link" href="{{ repository_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <nav class="project-links" aria-label="项目链接">
+          <a class="repo-link" href="{{ repository_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a class="repo-link" href="{{ repository_url }}#支持项目" target="_blank" rel="noopener noreferrer">支持项目</a>
+        </nav>
       </header>
 
       <section id="result" hidden>

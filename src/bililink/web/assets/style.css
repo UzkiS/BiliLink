@@ -184,19 +184,27 @@ code {
   gap: 8px;
 }
 
+.project-links {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
 .repo-link {
   padding: 3px 12px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+}
+
+.repo-link + .repo-link {
+  border-left: 1px solid var(--border);
 }
 
 .repo-link:hover {
   color: var(--accent);
-  border-color: var(--accent);
 }
 
 .examples {
@@ -238,7 +246,7 @@ body:not(.has-result) #lookup {
   margin-top: 8px;
 }
 
-body:not(.has-result) .repo-link {
+body:not(.has-result) .project-links {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -256,7 +264,7 @@ body.has-result .brand {
   grid-area: brand;
 }
 
-body.has-result .repo-link {
+body.has-result .project-links {
   grid-area: repo;
 }
 
@@ -583,7 +591,7 @@ h2 a:hover {
     padding: 16px 24px;
   }
 
-  body:not(.has-result) .repo-link {
+  body:not(.has-result) .project-links {
     top: 16px;
     right: 24px;
   }

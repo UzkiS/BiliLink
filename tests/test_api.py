@@ -5,6 +5,7 @@ import hashlib
 import logging
 import re
 import tomllib
+from html import unescape
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -336,7 +337,23 @@ def test_web_page_links_to_project(client: TestClient) -> None:
     html = client.get("/").text
 
     assert f'href="{project["urls"]["Repository"]}"' in html
+    assert f'href="{project["urls"]["Repository"]}#支持项目"' in html
+    assert '<nav class="project-links" aria-label="项目链接">' in html
     assert "{{" not in html
+
+
+def test_web_page_has_search_and_share_metadata(client: TestClient) -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    html = client.get("/").text
+    tags = dict(re.findall(r'<meta (?:name|property)="([^"]+)" content="([^"]*)">', html))
+    [title] = re.findall(r"<title>(.*?)</title>", html)
+
+    assert title == "BiliLink · B 站视频与直播直链解析"
+    assert tags["og:title"] == title
+    assert unescape(tags["description"]) == project["description"]
+    assert tags["og:description"] == tags["description"]
+    assert tags["og:type"] == "website"
+    assert tags["og:locale"] == "zh_CN"
 
 
 def test_assets_referenced_by_web_page_are_served(client: TestClient) -> None:

@@ -28,14 +28,20 @@ from bililink.resolver import Resolver
 
 _REDIRECT_STATUS = HTTPStatus.TEMPORARY_REDIRECT
 _WEB_DIR = Path(__file__).with_name("web")
+_PAGE_TITLE = "BiliLink · B 站视频与直播直链解析"
 
 
 def _render_index_html() -> str:
-    """网页界面的 HTML：填入仓库地址，取自包元数据（即 pyproject.toml 的 [project.urls]）。"""
-    entries = metadata("bililink").get_all("Project-URL", [])
+    """网页界面的 HTML：仓库地址与搜索摘要取自包元数据，避免重复维护。"""
+    project = metadata("bililink")
+    entries = project.get_all("Project-URL", [])
     repository = dict(entry.split(", ", 1) for entry in entries)["Repository"]
     html = (_WEB_DIR / "index.html").read_text(encoding="utf-8")
-    return html.replace("{{ repository_url }}", escape(repository))
+    return (
+        html.replace("{{ repository_url }}", escape(repository))
+        .replace("{{ page_title }}", escape(_PAGE_TITLE))
+        .replace("{{ project_description }}", escape(project["Summary"]))
+    )
 
 
 _INDEX_HTML = _render_index_html()
