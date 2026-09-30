@@ -6,6 +6,7 @@
 
 import json
 import os
+from pathlib import Path
 from typing import Annotated, Literal, Self
 
 from limits import parse_many
@@ -70,6 +71,24 @@ class Settings(BaseSettings):
         description=(
             "中国大陆以外的访问者改写视频直链时使用的 CDN 镜像域名，规则同 BILILINK_CDN_HOSTS；"
             "设为与 BILILINK_CDN_HOSTS 相同即不再按地区区分"
+        ),
+    )
+    geoip_update_interval: float = Field(
+        default=86400.0,
+        ge=0,
+        description=(
+            "中国大陆 IP 段自动更新间隔（秒）；启动后在后台立即从 APNIC 更新，"
+            "之后按此间隔刷新，失败时保留已有数据；设为 0 关闭网络更新"
+        ),
+    )
+    geoip_update_timeout: float = Field(
+        default=60.0, gt=0, description="从 APNIC 下载 IP 段数据的超时时间（秒）"
+    )
+    geoip_cache_file: Path | None = Field(
+        default=None,
+        description=(
+            "IP 段缓存文件路径；留空仅更新内存，兼容只读容器；"
+            "设置后启动时优先读取缓存，并在更新成功后写入，容器中需挂载可写目录"
         ),
     )
     log_level: LogLevel = Field(

@@ -6,7 +6,6 @@
 """
 
 import bisect
-import functools
 from collections import Counter
 from collections.abc import Iterable
 from ipaddress import (
@@ -38,15 +37,18 @@ class MainlandChinaNetworks:
 
     def __init__(self, networks: Iterable[IPNetwork]) -> None:
         networks = tuple(networks)
-        self._ipv4 = _AddressRanges(
-            collapse_addresses(n for n in networks if isinstance(n, IPv4Network))
-        )
-        self._ipv6 = _AddressRanges(
-            collapse_addresses(n for n in networks if isinstance(n, IPv6Network))
-        )
+        ipv4 = _AddressRanges(collapse_addresses(n for n in networks if isinstance(n, IPv4Network)))
+        ipv6 = _AddressRanges(collapse_addresses(n for n in networks if isinstance(n, IPv6Network)))
+        self._ranges = (ipv4, ipv6)
+
+    def replace(self, networks: MainlandChinaNetworks) -> None:
+        """整体替换地址段快照，已有解析器随即使用新数据。"""
+        # 两个地址族必须一次替换，避免查询读到来自不同版本的 IPv4 与 IPv6 数据。
+        self._ranges = networks._ranges
 
     def __contains__(self, address: IPAddress) -> bool:
-        ranges = self._ipv4 if isinstance(address, IPv4Address) else self._ipv6
+        ipv4, ipv6 = self._ranges
+        ranges = ipv4 if isinstance(address, IPv4Address) else ipv6
         return int(address) in ranges
 
 
@@ -63,9 +65,8 @@ class _AddressRanges:
         return index >= 0 and address <= self._ends[index]
 
 
-@functools.cache
 def load_mainland_china_networks() -> MainlandChinaNetworks:
-    """读取随包发布的数据文件；数据在运行期间不会变化，每个进程只读取一次。"""
+    """读取随包发布的初始数据；每个应用独立持有快照，避免更新影响其他应用。"""
     lines = DATA_FILE.read_text(encoding="utf-8").splitlines()
     return MainlandChinaNetworks(ip_network(line) for line in lines if not line.startswith("#"))
 

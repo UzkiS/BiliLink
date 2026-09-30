@@ -20,6 +20,8 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
         if name.startswith(ENV_PREFIX):
             monkeypatch.delenv(name)
     monkeypatch.chdir(tmp_path)
+    # 默认开启的 APNIC 后台更新不应让离线测试访问网络；更新测试单独注入网络替身并开启。
+    monkeypatch.setenv("BILILINK_GEOIP_UPDATE_INTERVAL", "0")
 
 
 @pytest.fixture

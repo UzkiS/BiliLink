@@ -88,6 +88,8 @@ def test_sessdata_is_masked(monkeypatch: pytest.MonkeyPatch) -> None:
         ("BILILINK_RATE_LIMIT", "10/minute;100/hour"),
         ("BILILINK_PORT", "0"),
         ("BILILINK_REQUEST_TIMEOUT", "0"),
+        ("BILILINK_GEOIP_UPDATE_INTERVAL", "-1"),
+        ("BILILINK_GEOIP_UPDATE_TIMEOUT", "0"),
         ("BILILINK_CDN_HOSTS", '["https://mirror.example.com"]'),
         ("BILILINK_CDN_OVERSEAS_HOSTS", '["mirror.example.com/path"]'),
         ("BILILINK_LOG_LEVEL", "verbose"),

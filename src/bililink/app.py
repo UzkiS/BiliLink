@@ -17,6 +17,7 @@ from bililink.bilibili import BilibiliClient
 from bililink.config import Settings
 from bililink.errors import BiliLinkError, ErrorResponse
 from bililink.geoip import load_mainland_china_networks
+from bililink.geoip_update import GeoIPUpdater
 from bililink.ratelimit import RateLimiter
 from bililink.resolver import Resolver
 from bililink.routes import api_router, health_router, media_router, web_assets, web_router
@@ -36,13 +37,17 @@ _VALIDATION_MESSAGES = {
 
 
 def create_app(
-    settings: Settings | None = None, *, transport: httpx2.AsyncBaseTransport | None = None
+    settings: Settings | None = None,
+    *,
+    transport: httpx2.AsyncBaseTransport | None = None,
+    geoip_transport: httpx2.AsyncBaseTransport | None = None,
 ) -> FastAPI:
     """创建应用实例。
 
     Args:
         settings: 运行配置；省略时从环境变量与 ``.env`` 读取。
         transport: 访问 B 站所用的网络层；省略时使用真实网络，测试时注入 ``httpx2.MockTransport``。
+        geoip_transport: 访问 APNIC 所用的网络层，测试时注入替身，与 B 站连接池独立。
     """
     if settings is None:
         settings = Settings()
@@ -50,14 +55,25 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         sessdata = settings.sessdata.get_secret_value() if settings.sessdata else None
-        async with BilibiliClient(
-            sessdata=sessdata, timeout=settings.request_timeout, transport=transport
-        ) as client:
+        networks = load_mainland_china_networks()
+        updater = GeoIPUpdater(
+            networks,
+            interval=settings.geoip_update_interval,
+            timeout=settings.geoip_update_timeout,
+            cache_file=settings.geoip_cache_file,
+            transport=geoip_transport,
+        )
+        async with (
+            BilibiliClient(
+                sessdata=sessdata, timeout=settings.request_timeout, transport=transport
+            ) as client,
+            updater.running(),
+        ):
             app.state.resolver = Resolver(
                 client,
                 cdn_hosts=settings.cdn_hosts,
                 cdn_overseas_hosts=settings.cdn_overseas_hosts,
-                mainland_networks=load_mainland_china_networks(),
+                mainland_networks=networks,
             )
             yield
 
