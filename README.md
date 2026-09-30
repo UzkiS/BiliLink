@@ -1,6 +1,10 @@
 # BiliLink · B 站视频与直播直链解析
 
 [![CI](https://github.com/UzkiS/BiliLink/actions/workflows/ci.yml/badge.svg)](https://github.com/UzkiS/BiliLink/actions/workflows/ci.yml)
+[![最新版本](https://img.shields.io/github/v/release/UzkiS/BiliLink?label=%E7%89%88%E6%9C%AC&color=fb7299)](https://github.com/UzkiS/BiliLink/releases/latest)
+[![许可证](https://img.shields.io/github/license/UzkiS/BiliLink?label=%E8%AE%B8%E5%8F%AF%E8%AF%81&color=5c6bc0)](LICENSE)
+[![Docker 支持 amd64 与 arm64](https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ed?logo=docker&logoColor=white)](#部署)
+[![VRChat 视频与直播](https://img.shields.io/badge/VRChat-%E8%A7%86%E9%A2%91%20%2F%20%E7%9B%B4%E6%92%AD-fb7299)](#在-vrchat-中播放-b-站视频与直播)
 
 BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播直链解析服务，基于 FastAPI，支持 Docker 部署。
 把视频 BV 号转为 MP4 直链，把直播间号转为 HLS（m3u8）播放地址，支持视频分 P、网页预览与按地区选择 CDN 节点。
