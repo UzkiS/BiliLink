@@ -158,6 +158,7 @@ code {
 
 .topbar {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px 16px;
   align-items: center;
 }
@@ -419,6 +420,7 @@ h2 a:hover {
 
 .current-link {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin-top: 12px;
 }
