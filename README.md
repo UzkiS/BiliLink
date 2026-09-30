@@ -20,6 +20,12 @@ BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播
 - **限流**：按客户端 IP 限流（规则可配置），可正确识别反向代理之后的真实 IP。
 - **运维**：统一的 JSON 错误响应、`/healthz` 健康检查、可选的 OpenAPI 文档。
 
+## 网页预览
+
+粘贴视频网址后，页面会列出全部分 P，可预览视频、筛选选集，并逐条或一键复制播放链接。
+
+![BiliLink 网页界面：视频预览、分 P 选集、筛选与链接复制](./docs/screenshots/web-preview.png)
+
 ## 部署
 
 镜像发布在 GitHub Container Registry，支持 x86_64（amd64）与 ARM64。
