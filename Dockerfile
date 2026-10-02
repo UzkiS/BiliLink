@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- 构建阶段：按 .python-version 安装 Python，按 uv.lock 安装依赖 ----
-FROM ghcr.io/astral-sh/uv:0.12.19-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.12.22-trixie-slim AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
