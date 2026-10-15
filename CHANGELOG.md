@@ -3,6 +3,16 @@
 本项目的重要变更都记录在此文件中。
 更新记录由 release-please 根据 Conventional Commits 自动生成，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.1](https://github.com/UzkiS/BiliLink/compare/v1.2.0...v1.2.1) (2026-10-15)
+
+
+### 修复
+
+* IP 段自动更新遇到意外错误时不再停止 ([298a6da](https://github.com/UzkiS/BiliLink/commit/298a6da0dc8d65ce649036b8bf8b2b5964f089be))
+* IPv6 访问者按 /64 网段限流 ([c6d6094](https://github.com/UzkiS/BiliLink/commit/c6d60947fb2e63271fd9aef9a7d37c76133d3e27))
+* 视频信息改用 wbi/view 接口，海外服务器上网页可以查询视频 ([6d50766](https://github.com/UzkiS/BiliLink/commit/6d507664879aed9b9495b60217237a8ed4efb06f))
+* 网页不再把 0 与超长数字识别为直播间号 ([26708a0](https://github.com/UzkiS/BiliLink/commit/26708a0796604fd69bf2201d615ef5d17855e9d4))
+
 ## [1.2.0](https://github.com/UzkiS/BiliLink/compare/v1.1.1...v1.2.0) (2026-09-30)
 
 
