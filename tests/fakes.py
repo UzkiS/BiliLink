@@ -1,4 +1,7 @@
-"""测试替身：用 ``httpx2.MockTransport`` 模拟 B 站接口，测试中不会发出任何真实网络请求。"""
+"""测试替身：用 ``httpx2.MockTransport`` 模拟 B 站接口，并提供 APNIC 样例数据。
+
+测试中不会发出任何真实网络请求。
+"""
 
 import json
 from collections.abc import Callable
@@ -17,6 +20,23 @@ PAGELIST = "/x/player/pagelist"
 PLAYURL = "/x/player/playurl"
 VIDEO_INFO = "/x/web-interface/view"
 LIVE_ROOM_PLAY_INFO = "/xlive/web-room/v2/index/getRoomPlayInfo"
+
+# 格式与 APNIC 的 delegated-apnic-latest 相同：文件头、各类记录的汇总行，然后是逐条记录。
+APNIC_DELEGATED = """\
+# 注释行
+2|apnic|20260926|8|19830613|20260925|+1000
+apnic|*|asn|*|1|summary
+apnic|*|ipv4|*|5|summary
+apnic|*|ipv6|*|2|summary
+apnic|CN|asn|4134|1|20020801|allocated
+apnic|CN|ipv4|1.0.1.0|256|20110414|allocated
+apnic|CN|ipv4|1.0.8.0|256|20110414|allocated
+apnic|CN|ipv4|1.0.9.0|256|20110414|allocated
+apnic|CN|ipv4|1.1.0.0|768|20110414|assigned
+apnic|JP|ipv4|1.0.16.0|4096|20110412|allocated
+apnic|CN|ipv6|240e::|20|20131231|allocated
+apnic|HK|ipv6|2400:8500::|32|20130315|allocated
+"""
 
 type Handler = Callable[[httpx2.Request], httpx2.Response]
 

@@ -5,27 +5,11 @@ from ipaddress import ip_address, ip_network
 import pytest
 
 from bililink.geoip import MainlandChinaNetworks, load_mainland_china_networks, render_data_file
-
-# 格式与 APNIC 的 delegated-apnic-latest 相同：文件头、各类记录的汇总行，然后是逐条记录。
-DELEGATED = """\
-# 注释行
-2|apnic|20260926|8|19830613|20260925|+1000
-apnic|*|asn|*|1|summary
-apnic|*|ipv4|*|5|summary
-apnic|*|ipv6|*|2|summary
-apnic|CN|asn|4134|1|20020801|allocated
-apnic|CN|ipv4|1.0.1.0|256|20110414|allocated
-apnic|CN|ipv4|1.0.8.0|256|20110414|allocated
-apnic|CN|ipv4|1.0.9.0|256|20110414|allocated
-apnic|CN|ipv4|1.1.0.0|768|20110414|assigned
-apnic|JP|ipv4|1.0.16.0|4096|20110412|allocated
-apnic|CN|ipv6|240e::|20|20131231|allocated
-apnic|HK|ipv6|2400:8500::|32|20130315|allocated
-"""
+from fakes import APNIC_DELEGATED
 
 
 def test_render_data_file_collapses_mainland_networks() -> None:
-    lines = render_data_file(DELEGATED).splitlines()
+    lines = render_data_file(APNIC_DELEGATED).splitlines()
     comments = [line for line in lines if line.startswith("#")]
     networks = [line for line in lines if not line.startswith("#")]
 
@@ -39,9 +23,9 @@ def test_render_data_file_collapses_mainland_networks() -> None:
 @pytest.mark.parametrize(
     "delegated",
     [
-        DELEGATED.replace("apnic|*|ipv4|*|5|summary", "apnic|*|ipv4|*|6|summary"),
-        DELEGATED.removesuffix("apnic|HK|ipv6|2400:8500::|32|20130315|allocated\n"),
-        DELEGATED.replace("|8|19830613|", "|9|19830613|"),
+        APNIC_DELEGATED.replace("apnic|*|ipv4|*|5|summary", "apnic|*|ipv4|*|6|summary"),
+        APNIC_DELEGATED.removesuffix("apnic|HK|ipv6|2400:8500::|32|20130315|allocated\n"),
+        APNIC_DELEGATED.replace("|8|19830613|", "|9|19830613|"),
     ],
 )
 def test_render_data_file_rejects_incomplete_data(delegated: str) -> None:

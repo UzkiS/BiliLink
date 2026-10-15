@@ -14,8 +14,7 @@ from bililink.app import create_app
 from bililink.config import Settings
 from bililink.geoip import APNIC_DELEGATED_URL, MainlandChinaNetworks, render_data_file
 from bililink.geoip_update import GeoIPUpdater
-from fakes import FakeBilibili
-from test_geoip import DELEGATED
+from fakes import APNIC_DELEGATED, FakeBilibili
 
 pytestmark = pytest.mark.anyio
 
@@ -52,7 +51,7 @@ async def test_updates_both_address_families_without_writing_packaged_data() -> 
 
     def respond(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return httpx2.Response(200, text=DELEGATED)
+        return httpx2.Response(200, text=APNIC_DELEGATED)
 
     async with make_updater(networks, respond).running():
         await wait_until(lambda: ip_address("1.0.1.1") in networks)
@@ -72,7 +71,9 @@ async def test_replaces_data_again_on_next_interval() -> None:
     def respond(_request: httpx2.Request) -> httpx2.Response:
         nonlocal requests
         requests += 1
-        contents = DELEGATED if requests == 1 else DELEGATED.replace("1.0.1.0", "1.0.2.0")
+        contents = (
+            APNIC_DELEGATED if requests == 1 else APNIC_DELEGATED.replace("1.0.1.0", "1.0.2.0")
+        )
         return httpx2.Response(200, text=contents)
 
     async with make_updater(networks, respond, interval=0.01).running():
@@ -100,17 +101,17 @@ async def test_failed_update_keeps_data_and_retries(
     networks = initial_networks()
     requests = 0
     malformed = {
-        "incomplete": DELEGATED.replace("|8|19830613|", "|9|19830613|"),
+        "incomplete": APNIC_DELEGATED.replace("|8|19830613|", "|9|19830613|"),
         "empty": "2|apnic|20260926|0|19830613|20260925|+1000\n",
         "malformed": "bad\nrow\n",
-        "missing_ipv6": DELEGATED.replace("apnic|CN|ipv6", "apnic|HK|ipv6"),
+        "missing_ipv6": APNIC_DELEGATED.replace("apnic|CN|ipv6", "apnic|HK|ipv6"),
     }
 
     def respond(_request: httpx2.Request) -> httpx2.Response:
         nonlocal requests
         requests += 1
         if requests > 1:
-            return httpx2.Response(200, text=DELEGATED)
+            return httpx2.Response(200, text=APNIC_DELEGATED)
         if failure == "timeout":
             msg = "超时"
             raise httpx2.ReadTimeout(msg)
@@ -135,7 +136,7 @@ async def test_unexpected_error_does_not_stop_updates(caplog: pytest.LogCaptureF
         if requests == 1:
             msg = "意外错误"
             raise RuntimeError(msg)
-        return httpx2.Response(200, text=DELEGATED)
+        return httpx2.Response(200, text=APNIC_DELEGATED)
 
     async with make_updater(networks, respond, interval=0.01).running():
         await wait_until(lambda: ip_address("1.0.1.1") in networks)
@@ -155,11 +156,11 @@ async def test_disabled_updater_does_not_access_network() -> None:
 
 async def test_successful_update_saves_cache_and_next_start_reads_it(tmp_path: Path) -> None:
     cache = tmp_path / "cache" / "cn_networks.txt"
-    contents = render_data_file(DELEGATED)
+    contents = render_data_file(APNIC_DELEGATED)
 
     async with make_updater(
         initial_networks(),
-        lambda _request: httpx2.Response(200, text=DELEGATED),
+        lambda _request: httpx2.Response(200, text=APNIC_DELEGATED),
         cache_file=cache,
     ).running():
         await wait_until(cache.exists)
@@ -213,7 +214,7 @@ async def test_cache_write_failure_still_updates_memory(
     cache.mkdir()
     networks = initial_networks()
     async with make_updater(
-        networks, lambda _request: httpx2.Response(200, text=DELEGATED), cache_file=cache
+        networks, lambda _request: httpx2.Response(200, text=APNIC_DELEGATED), cache_file=cache
     ).running():
         await wait_until(lambda: "IP 段缓存写入失败" in caplog.text)
         assert ip_address("1.0.1.1") in networks
@@ -225,7 +226,7 @@ async def test_failed_download_preserves_last_successful_cache(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     cache = tmp_path / "cache.txt"
-    contents = render_data_file(DELEGATED)
+    contents = render_data_file(APNIC_DELEGATED)
     cache.write_text(contents, encoding="utf-8")
     networks = initial_networks()
     async with make_updater(
@@ -250,7 +251,7 @@ async def test_app_starts_without_waiting_and_uses_new_data_for_cdn_selection(
         except asyncio.CancelledError:
             cancelled.set()
             raise
-        return httpx2.Response(200, text=DELEGATED.replace("1.0.1.0", "8.8.8.0"))
+        return httpx2.Response(200, text=APNIC_DELEGATED.replace("1.0.1.0", "8.8.8.0"))
 
     bilibili = FakeBilibili()
     app = create_app(
