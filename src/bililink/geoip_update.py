@@ -108,7 +108,12 @@ class GeoIPUpdater:
 
     async def _run(self, client: httpx2.AsyncClient) -> None:
         while True:
-            await self._refresh(client)
+            try:
+                await self._refresh(client)
+            except Exception:
+                # 后台任务一旦因异常退出，之后就再也不会更新，也不会留下任何日志；
+                # 意外错误同样只记录堆栈，保留已有数据，下一轮继续重试。
+                logger.exception("IP 段自动更新出现意外错误，保留已有数据")
             await asyncio.sleep(self._interval)
 
     async def _refresh(self, client: httpx2.AsyncClient) -> None:

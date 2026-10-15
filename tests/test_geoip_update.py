@@ -125,6 +125,24 @@ async def test_failed_update_keeps_data_and_retries(
         await wait_until(lambda: ip_address("1.0.1.1") in networks)
 
 
+async def test_unexpected_error_does_not_stop_updates(caplog: pytest.LogCaptureFixture) -> None:
+    networks = initial_networks()
+    requests = 0
+
+    def respond(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal requests
+        requests += 1
+        if requests == 1:
+            msg = "意外错误"
+            raise RuntimeError(msg)
+        return httpx2.Response(200, text=DELEGATED)
+
+    async with make_updater(networks, respond, interval=0.01).running():
+        await wait_until(lambda: ip_address("1.0.1.1") in networks)
+
+    assert "IP 段自动更新出现意外错误" in caplog.text
+
+
 async def test_disabled_updater_does_not_access_network() -> None:
     networks = initial_networks()
 
