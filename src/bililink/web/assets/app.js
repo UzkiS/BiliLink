@@ -7,8 +7,9 @@
 const BVID_PATTERN = "BV[1-9A-HJ-NP-Za-km-z]{10}";
 const BVID = new RegExp(BVID_PATTERN);
 const PAGE_PARAM = /[?&]p=(\d+)/;
-const LIVE_URL = /live\.bilibili\.com\/(?:h5\/)?(\d+)/;
-const ROOM_ID = /^\d+$/;
+// 直播间号从 1 开始；0 或以 0 开头的数字不是有效的直播间号。
+const LIVE_URL = /live\.bilibili\.com\/(?:h5\/)?([1-9]\d*)/;
+const ROOM_ID = /^[1-9]\d*$/;
 const SHORT_LINK = /b23\.tv\//;
 const PAGE_RANGE = /^p?(\d+)\s*[-~～]\s*p?(\d+)$/;
 const HLS_MIME_TYPE = "application/vnd.apple.mpegurl";
@@ -123,7 +124,8 @@ function parseInput(text) {
     return { kind: "video", bvid, page: page ? Number(page) : null };
   }
   const roomId = LIVE_URL.exec(text)?.[1] ?? (ROOM_ID.test(text) ? text : null);
-  return roomId ? { kind: "live", roomId: Number(roomId) } : null;
+  // 保留字符串：转换为数字时，超长的输入会丢失精度、变成科学计数法。
+  return roomId ? { kind: "live", roomId } : null;
 }
 
 function liveView({ roomId }) {
