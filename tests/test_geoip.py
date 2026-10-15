@@ -33,6 +33,20 @@ def test_render_data_file_rejects_incomplete_data(delegated: str) -> None:
         render_data_file(delegated)
 
 
+@pytest.mark.parametrize(
+    "delegated",
+    [
+        "",
+        "# 只有注释\n",
+        "<!DOCTYPE html>\n<html>\n",  # 下载到的是网页而不是数据文件
+        APNIC_DELEGATED.replace("apnic|JP|ipv4|1.0.16.0|4096|20110412|allocated", "apnic|JP"),
+    ],
+)
+def test_render_data_file_rejects_malformed_data(delegated: str) -> None:
+    with pytest.raises(ValueError, match="APNIC 数据格式无效"):
+        render_data_file(delegated)
+
+
 def test_networks_contain_addresses_between_boundaries() -> None:
     networks = MainlandChinaNetworks(
         [ip_network("1.0.2.0/23"), ip_network("1.0.1.0/24"), ip_network("240e::/20")]

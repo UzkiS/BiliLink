@@ -31,6 +31,10 @@ APNIC_DELEGATED_URL = "https://ftp.apnic.net/stats/apnic/delegated-apnic-latest"
 DATA_FILE = Path(__file__).with_name("cn_networks.txt")
 """中国大陆的 IP 段，每行一个 CIDR，``#`` 开头的行是注释。"""
 
+# APNIC 数据每行的最少字段数：文件头的第 4 个字段是记录数；汇总行有 6 个字段，记录有 7 个字段。
+_MIN_HEADER_FIELDS = 4
+_MIN_ROW_FIELDS = 6
+
 
 class MainlandChinaNetworks:
     """中国大陆的全部 IP 段，用 ``address in networks`` 判断地址是否属于中国大陆。"""
@@ -73,9 +77,18 @@ def load_mainland_china_networks() -> MainlandChinaNetworks:
 
 def render_data_file(delegated: str) -> str:
     """把 APNIC 地址分配记录转换为数据文件的内容：中国大陆的全部 IP 段，合并相邻网段后每行一个。"""
-    header, *rows = [
+    entries = [
         line.split("|") for line in delegated.splitlines() if line and not line.startswith("#")
     ]
+    # 字段不足说明不是 APNIC 的格式；统一以 ValueError 报告，与数据不完整等其他错误一致。
+    if (
+        not entries
+        or len(entries[0]) < _MIN_HEADER_FIELDS
+        or any(len(row) < _MIN_ROW_FIELDS for row in entries[1:])
+    ):
+        msg = "APNIC 数据格式无效"
+        raise ValueError(msg)
+    header, *rows = entries
     summary = {row[2]: int(row[4]) for row in rows if row[-1] == "summary"}
     records = [row for row in rows if row[-1] != "summary"]
     # 文件头与汇总行给出了各类记录的数量，据此发现下载中断等原因造成的数据不完整。

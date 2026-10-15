@@ -122,7 +122,7 @@ class GeoIPUpdater:
             response.raise_for_status()
             # APNIC 全量数据较大，解析和构建索引放在线程中，避免阻塞媒体请求。
             contents, networks = await asyncio.to_thread(_prepare_update, response.text)
-        except (httpx2.HTTPError, ValueError, IndexError) as exc:
+        except (httpx2.HTTPError, ValueError) as exc:
             logger.warning("IP 段自动更新失败，保留已有数据：%s", exc)
             return
 
