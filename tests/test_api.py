@@ -263,6 +263,23 @@ def test_rate_limit_is_shared_by_media_routes(make_client: ClientFactory) -> Non
     assert 1 <= int(response.headers["retry-after"]) <= 60
 
 
+@pytest.mark.anyio
+async def test_rate_limit_is_counted_per_client(bilibili: FakeBilibili) -> None:
+    app = create_app(Settings(rate_limit="1/minute"), transport=bilibili.transport)
+    expected = [
+        ("2001:db8::1", 307),
+        ("2001:db8::2", 429),  # 同一个 /64 网段
+        ("203.0.113.1", 307),
+        ("::ffff:203.0.113.1", 429),  # 监听 IPv6 双栈地址时 IPv4 访问者的地址形式
+    ]
+
+    async with app.router.lifespan_context(app):
+        for client_ip, status_code in expected:
+            transport = httpx2.ASGITransport(app=app, client=(client_ip, 50000))
+            async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+                assert (await client.get("/live/6")).status_code == status_code, client_ip
+
+
 def test_health_check_is_not_rate_limited(
     make_client: ClientFactory, bilibili: FakeBilibili
 ) -> None:

@@ -45,7 +45,10 @@ class Settings(BaseSettings):
     )
     rate_limit: str = Field(
         default="10/minute",
-        description="每个客户端 IP 的限流规则，如 10/minute、100/hour（limits 库的限流字符串语法）",
+        description=(
+            "每个客户端 IP（IPv6 按 /64 网段）的限流规则，如 10/minute、100/hour"
+            "（limits 库的限流字符串语法）"
+        ),
     )
     sessdata: SecretStr | None = Field(
         default=None,

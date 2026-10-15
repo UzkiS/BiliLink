@@ -115,13 +115,16 @@ def _get_client_ip(request: Request) -> IPAddress | None:
     return address
 
 
-async def _enforce_rate_limit(request: Request) -> None:
-    limiter: RateLimiter = request.app.state.rate_limiter
-    await limiter.hit(request)
-
-
 ResolverDep = Annotated[Resolver, Depends(_get_resolver)]
 ClientIPDep = Annotated[IPAddress | None, Depends(_get_client_ip)]
+
+
+async def _enforce_rate_limit(request: Request, client_ip: ClientIPDep) -> None:
+    # 与 CDN 地区判断使用同一个访问者地址（FastAPI 在同一请求内只计算一次）。
+    limiter: RateLimiter = request.app.state.rate_limiter
+    await limiter.hit(client_ip)
+
+
 BvidPath = Annotated[
     str,
     PathParam(pattern=f"^{BVID_PATTERN}$", description="视频 BV 号", examples=["BV1GJ411x7h7"]),
