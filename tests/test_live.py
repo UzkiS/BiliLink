@@ -21,26 +21,31 @@ pytestmark = [pytest.mark.live, pytest.mark.anyio]
 VIDEO = "BV1GJ411x7h7"  # Never Gonna Give You Up，长期稳定的单 P 稿件
 MULTI_PAGE_VIDEO = "BV1ex411J7GE"  # 长期稳定的多 P 稿件
 LIVE_ROOM = 6  # B 站官方直播间的短号
-SETTINGS = Settings()
+# 即使默认不运行，本模块也会在收集阶段导入，此时 conftest 尚未隔离本机的环境变量与 .env；
+# 因此参数化直接取字段的默认值，不能在模块级构造 Settings()。
+DEFAULT_CDN_HOSTS: tuple[str, ...] = Settings.model_fields["cdn_hosts"].default
+DEFAULT_CDN_OVERSEAS_HOSTS: tuple[str, ...] = Settings.model_fields["cdn_overseas_hosts"].default
 
 
 @pytest.fixture
 async def client() -> AsyncIterator[BilibiliClient]:
-    async with BilibiliClient(sessdata=None, timeout=SETTINGS.request_timeout) as client:
+    timeout = Settings().request_timeout
+    async with BilibiliClient(sessdata=None, timeout=timeout) as client:
         yield client
 
 
 @pytest.fixture
 def resolver(client: BilibiliClient) -> Resolver:
+    settings = Settings()
     return Resolver(
         client,
-        cdn_hosts=SETTINGS.cdn_hosts,
-        cdn_overseas_hosts=SETTINGS.cdn_overseas_hosts,
+        cdn_hosts=settings.cdn_hosts,
+        cdn_overseas_hosts=settings.cdn_overseas_hosts,
         mainland_networks=load_mainland_china_networks(),
     )
 
 
-@pytest.mark.parametrize("host", [*SETTINGS.cdn_hosts, *SETTINGS.cdn_overseas_hosts])
+@pytest.mark.parametrize("host", [*DEFAULT_CDN_HOSTS, *DEFAULT_CDN_OVERSEAS_HOSTS])
 async def test_default_cdn_mirrors_serve_video(client: BilibiliClient, host: str) -> None:
     resolver = Resolver(
         client,
