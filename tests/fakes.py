@@ -18,7 +18,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 PAGELIST = "/x/player/pagelist"
 PLAYURL = "/x/player/playurl"
-VIDEO_INFO = "/x/web-interface/view"
+VIDEO_INFO = "/x/web-interface/wbi/view"
 LIVE_ROOM_PLAY_INFO = "/xlive/web-room/v2/index/getRoomPlayInfo"
 
 # 格式与 APNIC 的 delegated-apnic-latest 相同：文件头、各类记录的汇总行，然后是逐条记录。

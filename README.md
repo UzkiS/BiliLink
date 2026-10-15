@@ -34,11 +34,11 @@ BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播
 
 镜像发布在 GitHub Container Registry，支持 x86_64（amd64）与 ARM64。
 
-部署前，先在服务器上确认它能正常访问 B 站接口：
+部署前，先在服务器上确认它能正常访问 B 站接口（视频重定向首先调用的就是这个接口）：
 
 ```bash
 curl -sS -o /dev/null -w "%{http_code}\n" -A "Mozilla/5.0" -e "https://www.bilibili.com/" \
-  "https://api.bilibili.com/x/web-interface/view?bvid=BV1GJ411x7h7"
+  "https://api.bilibili.com/x/player/pagelist?bvid=BV1GJ411x7h7"
 ```
 
 输出 `200` 即可部署；输出 `412` 说明这台服务器的出口 IP 已被 B 站风控，部署后也无法解析视频，

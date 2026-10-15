@@ -215,9 +215,11 @@ class BilibiliClient:
 
     async def get_video_info(self, bvid: str) -> VideoInfo:
         """获取视频的标题、封面与分 P 列表。"""
-        # 实测不带 WBI 签名的 view 接口仍然可用，签名只是 /wbi/view 等接口的要求。
+        # 实测（2026-10）在美国的服务器上，旧的 /x/web-interface/view 返回 HTTP 412，
+        # /wbi/view 则不带 WBI 签名也能正常访问；在中国大陆，两者返回的数据与错误码完全一致。
+        # 有版权地区限制的稿件，从海外请求会得到 -404（啥都木有）。
         return await self._get(
-            f"{_API_BASE}/x/web-interface/view",
+            f"{_API_BASE}/x/web-interface/wbi/view",
             {"bvid": bvid},
             _VIDEO_INFO,
             missing_message=f"视频 {bvid} 不存在",
