@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# 基础镜像同时固定标签与 digest：标签便于阅读，digest 保证每次构建使用同一份镜像（防止标签被篡改）；
+# 两者由 dependabot 一并更新。
+
 # ---- 构建阶段：按 .python-version 安装 Python，按 uv.lock 安装依赖 ----
-FROM ghcr.io/astral-sh/uv:0.12.22-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.12.22-trixie-slim@sha256:0d42a8146856d158fc883c0e9b92a026e1e2afb65772cd110b7fb3eb01a40e5e AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -24,7 +27,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable
 
 # ---- 运行阶段：只包含 Python 解释器与虚拟环境 ----
-FROM debian:trixie-slim
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 
 # httpx2 通过 truststore 使用系统证书库校验 HTTPS，而 slim 镜像默认不含 CA 证书。
 # CA 证书应始终保持最新，因此不固定版本。

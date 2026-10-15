@@ -131,7 +131,7 @@ Dockerfile、compose.yaml  镜像构建与部署
   以保证部署在根域名、子域名、反向代理子路径下都正确。
 - 第三方前端库随包内置在 `web/assets/vendor/`，与 npm 上的发布文件逐字节一致（pre-commit 不检查该目录），
   并附带其许可证。更新时从 npm 下载发布包，核对 `integrity` 后整体替换对应文件。
-- GitHub Actions 以完整 commit SHA 固定版本；会发布镜像的 `ci.yml` 不使用任何缓存，防止缓存投毒。
+- GitHub Actions 以完整 commit SHA 固定版本，Docker 基础镜像以 digest 固定；会发布镜像的 `ci.yml` 不使用任何缓存，防止缓存投毒。
 
 ## 提交与发布
 
