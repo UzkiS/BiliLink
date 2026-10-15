@@ -55,7 +55,7 @@ required-version = ">=0.12.19,<0.13"
 # ---------------------------------------------------------------------------
 
 [tool.poe.tasks.lint]
-help = "静态检查：ruff、mypy、uv.lock 一致性与通用文件检查（自动修复可修复项）"
+help = "静态检查：ruff、mypy、deptry、hadolint、actionlint、zizmor、uv.lock 一致性与通用文件检查（自动修复可修复项）"
 cmd = "pre-commit run --all-files --show-diff-on-failure"
 
 [tool.poe.tasks.test]
