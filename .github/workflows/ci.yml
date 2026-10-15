@@ -190,13 +190,18 @@ jobs:
         with:
           enable-cache: false
 
-      - name: 准备版本 PR 并调度检查
+      # 这一步会运行全部开发依赖与 pre-commit hooks，因此不提供有写权限的令牌，
+      # 即使其中某个依赖被投毒，也拿不到推送代码、创建标签的权限。
+      - name: 准备版本 PR
+        if: steps.release.outputs.prs_created == 'true'
+        run: uv run poe release-prepare
+
+      - name: 提交版本 PR 的更新并调度检查
         if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
         run: |
-          uv run poe release-prepare
           if ! git diff --quiet -- uv.lock src/bililink/cn_networks.txt; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
