@@ -279,8 +279,12 @@ class BilibiliClient:
             else:
                 msg = f"B 站接口返回 HTTP {exc.response.status_code}"
             raise UpstreamError(msg) from exc
+        except httpx2.TimeoutException as exc:
+            # 具体的异常类型与原因由 app.py 记录到日志，错误信息只说明用户能理解的情况。
+            msg = "请求 B 站接口超时，请稍后重试"
+            raise UpstreamError(msg) from exc
         except httpx2.HTTPError as exc:
-            msg = f"无法连接 B 站接口（{type(exc).__name__}）"
+            msg = "无法连接 B 站接口，请稍后重试"
             raise UpstreamError(msg) from exc
 
         try:

@@ -207,10 +207,15 @@ async def test_http_error_status_raises_upstream_error(
 
 
 @pytest.mark.parametrize(
-    "error", [httpx2.ConnectError("connection refused"), httpx2.ReadTimeout("timed out")]
+    ("error", "message"),
+    [
+        (httpx2.ConnectError("connection refused"), "无法连接 B 站接口，请稍后重试"),
+        (httpx2.ConnectTimeout("timed out"), "请求 B 站接口超时，请稍后重试"),
+        (httpx2.ReadTimeout("timed out"), "请求 B 站接口超时，请稍后重试"),
+    ],
 )
 async def test_network_errors_raise_upstream_error(
-    bilibili: FakeBilibili, error: httpx2.HTTPError
+    bilibili: FakeBilibili, error: httpx2.HTTPError, message: str
 ) -> None:
     def fail(_request: httpx2.Request) -> httpx2.Response:
         raise error
@@ -218,8 +223,11 @@ async def test_network_errors_raise_upstream_error(
     bilibili.respond_with(PAGELIST, fail)
 
     async with bilibili.client() as client:
-        with pytest.raises(UpstreamError, match=type(error).__name__):
+        with pytest.raises(UpstreamError, match=message) as exc_info:
             await client.get_video_pages("BV1ex411J7GE")
+
+    # 原始异常保留为原因，由应用记录到日志，便于排查。
+    assert exc_info.value.__cause__ is error
 
 
 @pytest.mark.parametrize("body", [b"not json", b'{"message": "missing code"}'])
