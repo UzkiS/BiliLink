@@ -1,7 +1,6 @@
 # 更新日志
 
-本项目的重要变更都记录在此文件中。
-更新记录由 release-please 根据 Conventional Commits 自动生成，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
+BiliLink 各版本中用户可见的变更，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [1.3.0](https://github.com/UzkiS/BiliLink/compare/v1.2.1...v1.3.0) (2026-10-16)
 

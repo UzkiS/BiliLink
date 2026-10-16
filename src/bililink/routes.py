@@ -216,7 +216,7 @@ async def redirect_to_video(
     client_ip: ClientIPDep,
     p: Annotated[int, Query(ge=1, description="分 P 序号，从 1 开始")] = 1,
 ) -> RedirectResponse:
-    """重定向到视频指定分 P 的 MP4 直链；CDN 镜像按访问者所在地区选择。"""
+    """重定向到视频指定分 P 的 MP4 直链；CDN 镜像按观看者所在地区选择。"""
     url = await resolver.resolve_video(bvid, p, client_ip)
     return RedirectResponse(url, status_code=_REDIRECT_STATUS)
 

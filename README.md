@@ -6,18 +6,18 @@
 [![Docker 支持 amd64 与 arm64](https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ed?logo=docker&logoColor=white)](#部署)
 [![VRChat 视频与直播](https://img.shields.io/badge/VRChat-%E8%A7%86%E9%A2%91%20%2F%20%E7%9B%B4%E6%92%AD-fb7299)](#在-vrchat-中播放-b-站视频与直播)
 
-BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播直链解析服务，基于 FastAPI，支持 Docker 部署。
+BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播直链解析服务，支持 Docker 部署。
 把视频 BV 号转为 MP4 直链，把直播间号转为 HLS（m3u8）播放地址，支持视频分 P、网页预览与按地区选择 CDN 节点。
 
-访问 `http://你的域名/BV1GJ411x7h7`，
-即被重定向到该视频的 MP4 直链，可直接用于 `<video>` 标签、播放器等任何需要“一个直链”的场景。
+访问 `http://你的域名/BV1GJ411x7h7`，即被重定向到该视频的 MP4 直链，
+可直接用于 `<video>` 标签、播放器等任何需要“一个直链”的场景。
 
 [部署](#部署) · [使用](#使用) · [配置](#配置) · [常见问题](#常见问题) · [支持项目](#支持项目)
 
 ## 功能
 
 - **视频**：`/{BV号}` 重定向到音视频合一的 MP4 直链，`?p=` 指定分 P；
-  直链域名按访问者所在地区改写为 CDN 镜像节点（见 [CDN 节点](#cdn-节点)）。
+  直链域名按观看者所在地区改写为 CDN 镜像节点（见 [CDN 节点](#cdn-节点)）。
 - **直播**：`/live/{直播间号}` 重定向到 HLS（m3u8）直播流，支持短号，优先选择 H.264 编码。
 - **网页界面**：粘贴 BV 号、视频网址、直播间号或直播间网址即可生成链接；自动列出全部分 P，
   可逐条复制或一键复制全部，也可以直接预览视频与直播。
@@ -34,7 +34,7 @@ BiliLink 是可自行部署的 Bilibili（哔哩哔哩／B 站）视频与直播
 
 镜像发布在 GitHub Container Registry，支持 x86_64（amd64）与 ARM64。
 
-部署前，先在服务器上确认它能正常访问 B 站接口（视频重定向首先调用的就是这个接口）：
+部署前，先在服务器上确认它能正常访问 B 站接口：
 
 ```bash
 curl -sS -o /dev/null -w "%{http_code}\n" -A "Mozilla/5.0" -e "https://www.bilibili.com/" \
@@ -84,6 +84,7 @@ docker run -d --name bililink --restart unless-stopped -p 5000:5000 ghcr.io/uzki
 需要安装 [uv](https://docs.astral.sh/uv/)，它会自动下载项目所需的 Python 版本并安装依赖：
 
 ```bash
+git clone https://github.com/UzkiS/BiliLink.git && cd BiliLink
 uv run --no-dev bililink
 ```
 
@@ -114,7 +115,7 @@ curl -i http://127.0.0.1:5000/BV1GJ411x7h7
 | 429    | 超出限流配额，`Retry-After` 响应头给出需要等待的秒数                        |
 | 502    | B 站接口不可用或返回异常                                                    |
 
-开启 `BILILINK_DOCS_ENABLED` 后，可在 `/docs` 查看由代码生成的完整接口文档。
+开启 `BILILINK_DOCS_ENABLED` 后，可在 `/docs` 查看完整的接口文档。
 
 ### 在 VRChat 中播放 B 站视频与直播
 
@@ -122,14 +123,14 @@ BiliLink 可用于 VRChat 世界中的视频播放器。通过 Nginx、Caddy 等
 把网页生成的链接粘贴到播放器的 URL 输入框即可：视频使用 `https://你的域名/BV1GJ411x7h7`，
 直播使用 `https://你的域名/live/6`，分 P 使用 `?p=` 指定。
 
-使用 HTTPS 链接；自建域名需要观看者在 VRChat 设置中开启 **Allow Untrusted URLs**。
+自建域名不在 VRChat 的域名允许列表中，观看者需要在 VRChat 设置中开启 **Allow Untrusted URLs** 才能播放。
 相关要求见 [VRChat 播放器文档](https://creators.vrchat.com/worlds/udon/video-players/)
 与[域名允许列表](https://creators.vrchat.com/worlds/udon/video-players/www-whitelist)。
 
 ## 配置
 
 配置通过 `BILILINK_` 前缀的环境变量，或工作目录下的 `.env` 文件提供。
-全部配置项、默认值与说明见 [`.env.example`](.env.example)，该文件由代码生成，始终与实现一致：
+全部配置项、默认值与说明见 [`.env.example`](.env.example)，可以直接下载作为 `.env` 使用：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/UzkiS/BiliLink/main/.env.example -o .env
@@ -142,7 +143,7 @@ curl -fsSL https://raw.githubusercontent.com/UzkiS/BiliLink/main/.env.example -o
 限流与 [CDN 节点](#cdn-节点)的地区判断依据的都是客户端 IP。部署在 Nginx、Caddy 等反向代理之后时，
 必须把 `BILILINK_FORWARDED_ALLOW_IPS` 设置为反向代理的地址：
 
-- 没有包含代理的地址时，所有请求都被视为来自代理，共享同一份限流配额，并且都按中国大陆访问者选择 CDN 节点；
+- 没有包含代理的地址时，所有请求都被视为来自代理，共享同一份限流配额，并且都按中国大陆观看者选择 CDN 节点；
 - 设置为 `*` 时，任何客户端都能伪造 `X-Forwarded-For` 绕过限流（仅当服务只能经由代理访问时才可以这样设置）。
 
 注意这里填的是**服务看到的**代理地址。代理与服务在同一台机器上时，用 Compose 部署（宿主机网络）
@@ -189,15 +190,11 @@ CDN 会把观看者调度到就近的节点。按观看者 IP 判断地区后：
 
 ### 地区数据
 
-观看者是否位于中国大陆，依据中国大陆 IP 段（来自 APNIC）在内存中判断，每次播放无需查询外部服务。
-启动时先使用内置数据，在后台下载最新 APNIC 数据，之后按 `BILILINK_GEOIP_UPDATE_INTERVAL` 定期自动更新；
-更新通过完整性与地址段校验后立即生效，无需重启容器。下载超时、数据异常时保留已有数据，下一轮继续重试。
-设 `BILILINK_GEOIP_UPDATE_INTERVAL=0` 可关闭后台网络更新。
+观看者是否位于中国大陆，按中国大陆的 IP 段（来自 APNIC）在本地判断，不需要查询外部服务。
 
-更新结果只保存在内存中，不写磁盘，兼容 `compose.yaml` 的只读文件系统；重启后先使用内置数据，再重新下载。
-内置数据在每次发布新版本时更新。
-
-更新间隔、下载超时等配置的默认值见 [`.env.example`](.env.example)。
+服务内置一份 IP 段数据（随每个版本更新），启动后会在后台下载最新数据，之后每隔
+`BILILINK_GEOIP_UPDATE_INTERVAL` 秒自动更新，无需重启；下载失败时继续使用已有数据。
+更新只保存在内存中，不需要可写的磁盘。设 `BILILINK_GEOIP_UPDATE_INTERVAL=0` 可关闭自动更新，只使用内置数据。
 
 ### 画质
 
