@@ -3,6 +3,13 @@
 本项目的重要变更都记录在此文件中。
 更新记录由 release-please 根据 Conventional Commits 自动生成，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.0](https://github.com/UzkiS/BiliLink/compare/v1.2.1...v1.3.0) (2026-10-16)
+
+
+### 新增
+
+* IP 段更新只保存在内存中，移除 BILILINK_GEOIP_CACHE_FILE 配置 ([ed723e7](https://github.com/UzkiS/BiliLink/commit/ed723e76149e9ec713965e1ac59365c0df763158))
+
 ## [1.2.1](https://github.com/UzkiS/BiliLink/compare/v1.2.0...v1.2.1) (2026-10-15)
 
 
