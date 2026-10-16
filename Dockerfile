@@ -4,7 +4,7 @@
 # 两者由 dependabot 一并更新。
 
 # ---- 构建阶段：按 .python-version 安装 Python，按 uv.lock 安装依赖 ----
-FROM ghcr.io/astral-sh/uv:0.12.22-trixie-slim@sha256:0d42a8146856d158fc883c0e9b92a026e1e2afb65772cd110b7fb3eb01a40e5e AS builder
+FROM ghcr.io/astral-sh/uv:0.13.1-trixie-slim@sha256:2a4b12b30aa1a0f1d1f420ad3f4ac27716d5c2962302ac8a7af67ac3287bf36c AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
