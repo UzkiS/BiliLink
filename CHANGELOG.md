@@ -2,6 +2,14 @@
 
 BiliLink 各版本中用户可见的变更，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.1](https://github.com/UzkiS/BiliLink/compare/v1.3.0...v1.3.1) (2026-10-16)
+
+
+### 修复
+
+* 网络错误提示不再显示内部异常名 ([9676c25](https://github.com/UzkiS/BiliLink/commit/9676c25c548d779f9fa8309afd4e54773c2b2d5b))
+* 网页说明文字改为面向使用者的表述 ([9bba54c](https://github.com/UzkiS/BiliLink/commit/9bba54c0a26670223ea05f91b2817bedfa321f8f))
+
 ## [1.3.0](https://github.com/UzkiS/BiliLink/compare/v1.2.1...v1.3.0) (2026-10-16)
 
 
