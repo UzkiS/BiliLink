@@ -60,7 +60,6 @@ def create_app(
             networks,
             interval=settings.geoip_update_interval,
             timeout=settings.geoip_update_timeout,
-            cache_file=settings.geoip_cache_file,
             transport=geoip_transport,
         )
         async with (

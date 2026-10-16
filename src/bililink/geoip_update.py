@@ -1,12 +1,10 @@
-"""后台维护 APNIC 数据：先使用内置或缓存数据，更新失败时保留当前快照。"""
+"""后台维护 APNIC 数据：先使用内置数据，定期下载更新，失败时保留当前快照；数据只保存在内存中。"""
 
 import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from ipaddress import IPv4Network, IPv6Network
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import httpx2
 from pydantic import BaseModel, Field, field_validator
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class _NetworkData(BaseModel):
-    """下载与缓存的共同边界：拒绝空数据及缺少任一地址族的数据。"""
+    """下载数据的边界：拒绝空数据及缺少任一地址族的数据。"""
 
     networks: tuple[IPNetwork, ...] = Field(min_length=1)
 
@@ -35,28 +33,13 @@ class _NetworkData(BaseModel):
         return networks
 
 
-def _parse_networks(contents: str) -> MainlandChinaNetworks:
+def _parse_delegated(delegated: str) -> MainlandChinaNetworks:
+    # 与随包数据文件经过同一套生成规则，再按数据文件的格式解析并校验。
+    contents = render_data_file(delegated)
     data = _NetworkData.model_validate(
         {"networks": [line for line in contents.splitlines() if line and not line.startswith("#")]}
     )
     return MainlandChinaNetworks(data.networks)
-
-
-def _prepare_update(delegated: str) -> tuple[str, MainlandChinaNetworks]:
-    contents = render_data_file(delegated)
-    return contents, _parse_networks(contents)
-
-
-def _write_cache(path: Path, contents: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # 临时文件与目标同目录，原子替换保证重启或其他进程只会读到完整文件。
-    with NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as file:
-        temporary = Path(file.name)
-    try:
-        temporary.write_text(contents, encoding="utf-8", newline="\n")
-        temporary.replace(path)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 class GeoIPUpdater:
@@ -68,29 +51,16 @@ class GeoIPUpdater:
         *,
         interval: float,
         timeout: float,
-        cache_file: Path | None,
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self._networks = networks
         self._interval = interval
         self._timeout = timeout
-        self._cache_file = cache_file
         self._transport = transport
 
     @asynccontextmanager
     async def running(self) -> AsyncIterator[None]:
-        """读取可用缓存并启动后台更新；退出时取消任务、关闭连接池。"""
-        if self._cache_file is not None:
-            try:
-                contents = await asyncio.to_thread(self._cache_file.read_text, encoding="utf-8")
-                cached = await asyncio.to_thread(_parse_networks, contents)
-            except FileNotFoundError:
-                pass
-            except (OSError, ValueError, UnicodeError) as exc:
-                logger.warning("IP 段缓存读取失败，继续使用内置数据：%s", exc)
-            else:
-                self._networks.replace(cached)
-
+        """启动后台更新；退出时取消任务、关闭连接池。"""
         if self._interval == 0:
             yield
             return
@@ -121,16 +91,10 @@ class GeoIPUpdater:
             response = await client.get(APNIC_DELEGATED_URL)
             response.raise_for_status()
             # APNIC 全量数据较大，解析和构建索引放在线程中，避免阻塞媒体请求。
-            contents, networks = await asyncio.to_thread(_prepare_update, response.text)
+            networks = await asyncio.to_thread(_parse_delegated, response.text)
         except (httpx2.HTTPError, ValueError) as exc:
             logger.warning("IP 段自动更新失败，保留已有数据：%s", exc)
             return
 
         self._networks.replace(networks)
-        if self._cache_file is not None:
-            try:
-                await asyncio.to_thread(_write_cache, self._cache_file, contents)
-            except OSError as exc:
-                # 只读磁盘等缓存问题不影响本次已经成功更新的内存数据。
-                logger.warning("IP 段缓存写入失败，内存数据已更新：%s", exc)
         logger.info("中国大陆 IP 段已自动更新")

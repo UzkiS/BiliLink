@@ -36,7 +36,7 @@ src/bililink/
 ├── resolver.py        业务层：选择分 P、按访问者地区改写 CDN、选择直播编码
 ├── bilibili.py        B 站接口客户端：请求、响应解析、错误码映射
 ├── geoip.py           判断 IP 是否属于中国大陆；cn_networks.txt 是它的数据（生成）
-├── geoip_update.py    后台更新 APNIC 数据、热替换内存快照与可选缓存
+├── geoip_update.py    后台更新 APNIC 数据、热替换内存快照
 ├── ratelimit.py       按客户端 IP 限流
 ├── errors.py          业务异常与错误响应格式
 ├── config.py          运行时配置

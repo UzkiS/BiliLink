@@ -1,10 +1,9 @@
-"""运行时 IP 段维护：热更新、失败回退、缓存与应用生命周期。"""
+"""运行时 IP 段维护：热更新、失败回退与应用生命周期。"""
 
 import asyncio
 import logging
 from collections.abc import Callable
 from ipaddress import ip_address, ip_network
-from pathlib import Path
 
 import httpx2
 import pytest
@@ -12,7 +11,7 @@ from pydantic import SecretStr
 
 from bililink.app import create_app
 from bililink.config import Settings
-from bililink.geoip import APNIC_DELEGATED_URL, MainlandChinaNetworks, render_data_file
+from bililink.geoip import APNIC_DELEGATED_URL, MainlandChinaNetworks
 from bililink.geoip_update import GeoIPUpdater
 from fakes import APNIC_DELEGATED, FakeBilibili
 
@@ -34,13 +33,11 @@ def make_updater(
     handler: Callable[[httpx2.Request], httpx2.Response],
     *,
     interval: float = 3600,
-    cache_file: Path | None = None,
 ) -> GeoIPUpdater:
     return GeoIPUpdater(
         networks,
         interval=interval,
         timeout=2,
-        cache_file=cache_file,
         transport=httpx2.MockTransport(handler),
     )
 
@@ -152,90 +149,6 @@ async def test_disabled_updater_does_not_access_network() -> None:
 
     async with make_updater(networks, unexpected, interval=0).running():
         assert ip_address("114.114.114.114") in networks
-
-
-async def test_successful_update_saves_cache_and_next_start_reads_it(tmp_path: Path) -> None:
-    cache = tmp_path / "cache" / "cn_networks.txt"
-    contents = render_data_file(APNIC_DELEGATED)
-
-    async with make_updater(
-        initial_networks(),
-        lambda _request: httpx2.Response(200, text=APNIC_DELEGATED),
-        cache_file=cache,
-    ).running():
-        await wait_until(cache.exists)
-
-    assert cache.read_text(encoding="utf-8") == contents
-    assert sorted(path.name for path in cache.parent.iterdir()) == [cache.name]
-    networks = initial_networks()
-    async with make_updater(
-        networks,
-        lambda _request: httpx2.Response(503),
-        interval=0,
-        cache_file=cache,
-    ).running():
-        assert ip_address("1.0.1.1") in networks
-        assert ip_address("114.114.114.114") not in networks
-
-
-async def test_missing_cache_uses_packaged_data(tmp_path: Path) -> None:
-    networks = initial_networks()
-    async with make_updater(
-        networks,
-        lambda _request: httpx2.Response(503),
-        interval=0,
-        cache_file=tmp_path / "missing.txt",
-    ).running():
-        assert ip_address("114.114.114.114") in networks
-
-
-@pytest.mark.parametrize("contents", [b"invalid\n", b"\xff", None])
-async def test_unreadable_cache_keeps_packaged_data(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture, contents: bytes | None
-) -> None:
-    cache = tmp_path / "cache.txt"
-    if contents is None:
-        cache.mkdir()
-    else:
-        cache.write_bytes(contents)
-    networks = initial_networks()
-    async with make_updater(
-        networks, lambda _request: httpx2.Response(503), interval=0, cache_file=cache
-    ).running():
-        assert ip_address("114.114.114.114") in networks
-
-    assert "IP 段缓存读取失败" in caplog.text
-
-
-async def test_cache_write_failure_still_updates_memory(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    cache = tmp_path / "cache.txt"
-    cache.mkdir()
-    networks = initial_networks()
-    async with make_updater(
-        networks, lambda _request: httpx2.Response(200, text=APNIC_DELEGATED), cache_file=cache
-    ).running():
-        await wait_until(lambda: "IP 段缓存写入失败" in caplog.text)
-        assert ip_address("1.0.1.1") in networks
-
-    assert await asyncio.to_thread(lambda: list(tmp_path.iterdir())) == [cache]
-
-
-async def test_failed_download_preserves_last_successful_cache(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    cache = tmp_path / "cache.txt"
-    contents = render_data_file(APNIC_DELEGATED)
-    cache.write_text(contents, encoding="utf-8")
-    networks = initial_networks()
-    async with make_updater(
-        networks, lambda _request: httpx2.Response(503), cache_file=cache
-    ).running():
-        await wait_until(lambda: "IP 段自动更新失败" in caplog.text)
-        assert ip_address("1.0.1.1") in networks
-
-    assert cache.read_text(encoding="utf-8") == contents
 
 
 async def test_app_starts_without_waiting_and_uses_new_data_for_cdn_selection(

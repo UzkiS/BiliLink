@@ -6,7 +6,6 @@
 
 import json
 import os
-from pathlib import Path
 from typing import Annotated, Literal, Self
 
 from limits import parse_many
@@ -86,13 +85,6 @@ class Settings(BaseSettings):
     )
     geoip_update_timeout: float = Field(
         default=60.0, gt=0, description="从 APNIC 下载 IP 段数据的超时时间（秒）"
-    )
-    geoip_cache_file: Path | None = Field(
-        default=None,
-        description=(
-            "IP 段缓存文件路径；留空仅更新内存，兼容只读容器；"
-            "设置后启动时优先读取缓存，并在更新成功后写入，容器中需挂载可写目录"
-        ),
     )
     log_level: LogLevel = Field(
         default="INFO", description="日志级别：DEBUG、INFO、WARNING、ERROR 或 CRITICAL"
