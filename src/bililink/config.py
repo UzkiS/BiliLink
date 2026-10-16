@@ -37,16 +37,17 @@ class Settings(BaseSettings):
     forwarded_allow_ips: str = Field(
         default="127.0.0.1",
         description=(
-            "受信任的反向代理 IP（逗号分隔，支持 CIDR）。"
-            "只有来自这些地址的 X-Forwarded-For 才会被当作客户端 IP 用于限流；"
-            "部署在反向代理之后必须正确设置，直接对外暴露时切勿设为 *"
+            "受信任的反向代理地址（逗号分隔，支持 CIDR）。只有来自这些地址的请求，"
+            "才会采用 X-Forwarded-For 中的客户端 IP 来限流和判断观看者地区；"
+            "部署在反向代理之后必须设为代理的地址，服务直接对外暴露时切勿设为 *"
         ),
     )
     rate_limit: str = Field(
         default="10/minute",
         description=(
-            "每个客户端 IP（IPv6 按 /64 网段）的限流规则，如 10/minute、100/hour"
-            "（limits 库的限流字符串语法）"
+            "每个客户端 IP（IPv6 按 /64 网段）的请求次数上限，写作“次数/时间单位”，"
+            "如 10/minute、100/hour，单位可用 second、minute、hour、day；"
+            "只统计视频链接、直播链接与网页查询视频的请求"
         ),
     )
     sessdata: SecretStr | None = Field(
@@ -61,8 +62,8 @@ class Settings(BaseSettings):
             "upos-sz-mirror08c.bilivideo.com",
         ),
         description=(
-            "中国大陆访问者（以及内网等无法判断地区的访问者）改写视频直链时使用的 CDN 镜像域名"
-            "（JSON 数组），每次随机选择一个；设为 [] 则保留 B 站返回的原始域名"
+            "中国大陆观看者（以及内网等无法判断地区的观看者）使用的视频 CDN 镜像域名，"
+            "JSON 数组，每次随机选择一个；设为 [] 则使用 B 站返回的原始地址"
         ),
     )
     cdn_overseas_hosts: tuple[Hostname, ...] = Field(
@@ -71,7 +72,7 @@ class Settings(BaseSettings):
             "upos-sz-mirrorcosov.bilivideo.com",
         ),
         description=(
-            "中国大陆以外的访问者改写视频直链时使用的 CDN 镜像域名，规则同 BILILINK_CDN_HOSTS；"
+            "中国大陆以外的观看者使用的视频 CDN 镜像域名，格式同 BILILINK_CDN_HOSTS；"
             "设为与 BILILINK_CDN_HOSTS 相同即不再按地区区分"
         ),
     )
@@ -79,8 +80,8 @@ class Settings(BaseSettings):
         default=86400.0,
         ge=0,
         description=(
-            "中国大陆 IP 段自动更新间隔（秒）；启动后在后台立即从 APNIC 更新，"
-            "之后按此间隔刷新，失败时保留已有数据；设为 0 关闭网络更新"
+            "判断观看者地区所用的中国大陆 IP 段的自动更新间隔（秒）：启动后立即在后台"
+            "从 APNIC 下载，之后按此间隔更新，失败时继续使用已有数据；设为 0 则只使用内置数据"
         ),
     )
     geoip_update_timeout: float = Field(
@@ -132,8 +133,9 @@ def render_env_example() -> str:
     未设置的项始终跟随代码中的默认值，避免复制后的 ``.env`` 与新版本默认值脱节。
     """
     lines = [
-        "# 由 `uv run poe env-example` 根据 src/bililink/config.py 自动生成，请勿手动编辑。",
-        "# 使用方法：复制为 .env，只取消注释并修改需要调整的项。",
+        "# BiliLink 配置：每一项都以注释形式给出默认值。",
+        "# 复制为 .env 后，只取消注释并修改需要调整的项。",
+        "# 未设置的项使用默认值，升级后跟随新版本的默认值。",
     ]
     for name, field in Settings.model_fields.items():
         lines += [
