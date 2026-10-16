@@ -133,7 +133,7 @@ function liveView({ roomId }) {
     title: `直播间 ${roomId}`,
     titleUrl: `https://live.bilibili.com/${roomId}`,
     meta: "HLS 直播流（m3u8）",
-    hint: "链接长期有效：每次播放都会重新获取直播流。",
+    hint: "链接长期有效，可分享给他人：每次播放都会获取最新的直播流。",
     cover: "",
     entries: [{ label: "直播", title: "", url: serviceUrl(`live/${roomId}`), live: true }],
     selected: 0,
@@ -150,7 +150,7 @@ async function videoView({ bvid, page }) {
     title: video.title,
     titleUrl: `https://www.bilibili.com/video/${bvid}`,
     meta: multiPage ? `${bvid} · 共 ${pages.length} P · 总时长 ${duration}` : `${bvid} · 时长 ${duration}`,
-    hint: "链接长期有效：每次播放都会重新解析，并为观看者选择所在地区的 CDN 节点。",
+    hint: "链接长期有效，可分享给他人：每次播放都会重新获取地址，为观看者就近选择节点。",
     cover: video.cover,
     entries: pages.map((item) => ({
       label: `P${item.page}`,
