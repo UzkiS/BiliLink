@@ -43,12 +43,12 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.19,<0.13"]
+requires = ["uv_build>=0.13.5,<0.14"]
 build-backend = "uv_build"
 
 [tool.uv]
 # 本地与 CI 使用的 uv 版本范围；Dockerfile 固定的 uv 版本必须落在该范围内（由测试保证）。
-required-version = ">=0.12.19,<0.13"
+required-version = ">=0.13.5,<0.14"
 
 # ---------------------------------------------------------------------------
 # 开发命令：本地、pre-commit 与 CI 统一通过 `uv run poe <task>` 调用，这里是唯一定义处。
